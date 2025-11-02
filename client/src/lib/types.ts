@@ -1,6 +1,13 @@
-export interface App {
+export interface Category {
   id: number
-  category: 'Personeel' | 'Administratie' | 'MT' | 'Overzicht'
+  name: string
+  description?: string
+  created_at?: string
+}
+
+interface App {
+  id: number
+  category: string
   title: string
   description?: string
   image_url?: string

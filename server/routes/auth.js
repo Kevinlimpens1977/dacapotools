@@ -6,8 +6,9 @@ const router = Router();
 router.post('/login', async (req, res) => {
   const { password } = req.body || {};
   const expected = process.env.ADMIN_SECRET || 'kevinmaaktalles';
+  console.log('Login attempt - Expected:', expected, 'Received:', password);
   if (!password) return res.status(400).json({ error: 'Password required' });
-  if (password !== expected) return res.status(401).json({ error: 'Invalid password' });
+  if (password.toLowerCase() !== expected.toLowerCase()) return res.status(401).json({ error: 'Invalid password' });
 
   const token = signToken({ role: 'admin' });
   res.json({ token });

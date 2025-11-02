@@ -3,9 +3,19 @@ import { useNavigate } from 'react-router-dom'
 import { getAllAppsGrouped, createApp, pasteImage, deleteApp } from '../lib/api'
 import type { App, AppsGrouped } from '../lib/types'
 
+interface Category {
+  id: number;
+  name: string;
+  description?: string;
+}
+
 export default function Admin() {
-  const [grouped, setGrouped] = useState<AppsGrouped | null>(null)
-  const [category, setCategory] = useState<App['category']>('Personeel')
+  const [grouped, setGrouped] = useState<AppsGrouped | null>(null);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [category, setCategory] = useState<string>('Personeel');
+  const [showNewCategory, setShowNewCategory] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState('');
+  const [newCategoryDesc, setNewCategoryDesc] = useState('');
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [linkUrl, setLinkUrl] = useState('')

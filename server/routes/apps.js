@@ -43,26 +43,46 @@ router.get('/apps', async (req, res) => {
 
 router.get('/apps/all', async (_req, res) => {
   try {
+    console.log('Fetching all apps from database...');
     const [rows] = await pool.query('SELECT * FROM apps ORDER BY created_at DESC');
-    const grouped = { Personeel: [], Administratie: [], MT: [], Overzicht: [] };
-    for (const r of rows) {
-      if (grouped[r.category]) grouped[r.category].push(r);
+    console.log('Got apps from database:', rows);
+    
+    const grouped = {
+      Personeel: [],
+      Administratie: [],
+      MT: [],
+      Overzicht: []
+    };
+    
+    for (const row of rows) {
+      if (grouped[row.category]) {
+        grouped[row.category].push(row);
+      }
     }
+    
+    console.log('Grouped apps:', grouped);
     res.json(grouped);
   } catch (e) {
-    res.status(500).json({ error: 'Server error' });
+    console.error('Error fetching apps:', e);
+    res.status(500).json({ error: 'Database error: ' + e.message });
   }
 });
 
 router.post('/apps', requireAuth, upload.single('image'), async (req, res) => {
   try {
+    console.log('Creating new app with body:', req.body);
+    console.log('File upload:', req.file);
+    
     const { category, title, description, link_url } = req.body;
     ensureValidCategory(category);
     if (!title) return res.status(400).json({ error: 'Title required' });
 
     let image_url = null;
     if (req.file) {
-      image_url = `/uploads/${req.file.filename}`;
+      // Gebruik volledige URL voor afbeeldingen
+      const baseUrl = process.env.API_URL || 'http://localhost:3001';
+      image_url = `${baseUrl}/uploads/${req.file.filename}`;
+      console.log('Setting image URL:', image_url);
     }
 
     const [result] = await pool.execute(
@@ -71,8 +91,10 @@ router.post('/apps', requireAuth, upload.single('image'), async (req, res) => {
     );
 
     const [rows] = await pool.query('SELECT * FROM apps WHERE id = ?', [result.insertId]);
+    console.log('Created app:', rows[0]);
     res.status(201).json(rows[0]);
   } catch (e) {
+    console.error('Error creating app:', e);
     res.status(e.status || 500).json({ error: e.message || 'Server error' });
   }
 });

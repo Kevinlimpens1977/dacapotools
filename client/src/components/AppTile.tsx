@@ -1,54 +1,51 @@
 import { motion } from 'framer-motion'
-import { useState } from 'react'
 import type { App } from '../lib/types'
 
 interface AppTileProps {
-  app: App
+  app: App;
+  onMouseEnter?: () => void;
 }
 
-export default function AppTile({ app }: AppTileProps) {
-  const [hover, setHover] = useState(false)
-
-  function handleClick() {
-    if (app.link_url) {
-      window.open(app.link_url, '_blank', 'noopener,noreferrer')
-    }
-  }
-
+export default function AppTile({ app, onMouseEnter }: AppTileProps) {
   return (
-    <motion.div
-      onClick={handleClick}
-      onMouseEnter={() => setHover(true)}
-      onMouseLeave={() => setHover(false)}
-      whileHover={{ scale: 1.02 }}
-      transition={{ duration: 0.2 }}
-      className="relative flex-shrink-0 w-72 h-48 bg-white rounded-2xl shadow-lg overflow-hidden cursor-pointer group"
-      tabIndex={0}
-      role="button"
-      aria-label={app.title}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter') handleClick()
-      }}
+    <motion.a
+      href={app.url}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="flex-shrink-0 w-48 sm:w-56 bg-white rounded-xl shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden border-2 border-emerald-600/30 hover:border-emerald-500/50"
+      whileHover={{ scale: 1.02, y: -2 }}
+      whileTap={{ scale: 0.98 }}
+      onMouseEnter={onMouseEnter}
     >
-      {app.image_url && (
-        <img
-          src={app.image_url}
-          alt={app.title}
-          className="w-full h-full object-cover"
-        />
-      )}
-      <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4">
-        <h3 className="text-white font-semibold text-lg">{app.title}</h3>
+      <div className="aspect-video w-full bg-gray-100 relative">
+        {app.thumbnail ? (
+          <img
+            src={app.thumbnail}
+            alt={app.title}
+            className="w-full h-full object-cover"
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center">
+            {app.icon ? (
+              <img
+                src={app.icon}
+                alt={app.title}
+                className="w-12 h-12 opacity-50"
+              />
+            ) : (
+              <div className="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center">
+                <span className="text-xl font-medium text-gray-400">
+                  {app.title.charAt(0)}
+                </span>
+              </div>
+            )}
+          </div>
+        )}
       </div>
-      {hover && app.description && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="absolute inset-0 bg-black/70 text-white p-6 flex items-center justify-center"
-        >
-          <p className="text-center">{app.description}</p>
-        </motion.div>
-      )}
-    </motion.div>
-  )
+      <div className="p-4">
+        <h3 className="font-medium text-gray-900 mb-1 line-clamp-1">{app.title}</h3>
+        <p className="text-sm text-gray-500 line-clamp-2">{app.description}</p>
+      </div>
+    </motion.a>
+  );
 }
