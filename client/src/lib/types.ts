@@ -5,7 +5,7 @@ export interface Category {
   created_at?: string
 }
 
-interface App {
+export interface App {
   id: number
   category: string
   title: string

@@ -1,19 +1,50 @@
 import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import { getAllAppsGrouped } from '../lib/api'
-import type { AppsGrouped } from '../lib/types'
+import type { AppsGrouped, App } from '../lib/types'
 import RowCarousel from '../components/RowCarousel'
-import SearchBar from '../components/SearchBar'
+import AppTile from '../components/AppTile'
+import { useSearch } from './App'
 
 export default function Dashboard() {
   const [grouped, setGrouped] = useState<AppsGrouped | null>(null)
-  const [search, setSearch] = useState('')
+  const [error, setError] = useState<string | null>(null)
+  const { search } = useSearch()
+  const [previewApp, setPreviewApp] = useState<App | null>(null)
 
   useEffect(() => {
-    getAllAppsGrouped().then(setGrouped).catch(console.error)
+    getAllAppsGrouped()
+      .then((data: AppsGrouped) => setGrouped(data))
+      .catch(err => {
+        console.error('Error fetching apps:', err);
+        setError(err instanceof Error ? err.message : 'Failed to load apps');
+      });
   }, [])
 
-  if (!grouped) return <div className="p-8 text-center text-gray-600">Loading...</div>
+  if (error) {
+    return (
+      <div className="p-8 text-center">
+        <p className="text-red-600 mb-4">{error}</p>
+        <button 
+          onClick={() => window.location.reload()}
+          className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700"
+        >
+          Retry
+        </button>
+      </div>
+    );
+  }
+
+  if (!grouped) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-white flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-emerald-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading applications...</p>
+        </div>
+      </div>
+    );
+  }
 
   const filtered = !search ? grouped : {
     Personeel: grouped.Personeel.filter(matchSearch),
@@ -28,40 +59,35 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-white">
-      <SearchBar value={search} onChange={setSearch} />
+    <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-white px-4 sm:px-8">
+      
+      {/* Preview Modal */}
+      {previewApp && (
+        <div
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+          onClick={() => setPreviewApp(null)}
+        >
+          <div
+            className="max-w-2xl w-full"
+            onClick={e => e.stopPropagation()}
+          >
+            <AppTile app={previewApp} preview />
+          </div>
+        </div>
+      )}
+
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, ease: "easeOut" }}
-        className="max-w-[95rem] mx-auto py-8 space-y-8"
+        className="max-w-[95rem] mx-auto py-8"
       >
-        {/* Welkomstbericht */}
-        <div className="px-4 sm:px-8 mb-12">
-          <motion.h1 
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-            className="text-4xl font-light text-gray-800"
-          >
-            Welkom bij <span className="text-emerald-600 font-medium">DaCapo Tools</span>
-          </motion.h1>
-          <motion.p 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.4 }}
-            className="mt-2 text-gray-500"
-          >
-            Kies een applicatie om te starten
-          </motion.p>
-        </div>
-
-        {/* Categorieën */}
-        <div className="space-y-2">
-          <RowCarousel title="Personeel" items={filtered.Personeel} />
-          <RowCarousel title="Administratie" items={filtered.Administratie} />
-          <RowCarousel title="MT" items={filtered.MT} />
-          <RowCarousel title="Overzicht" items={filtered.Overzicht} />
+        {/* Categories */}
+        <div className="space-y-6">
+          <RowCarousel title="Personeel" items={filtered.Personeel} onPreview={setPreviewApp} />
+          <RowCarousel title="Administratie" items={filtered.Administratie} onPreview={setPreviewApp} />
+          <RowCarousel title="MT" items={filtered.MT} onPreview={setPreviewApp} />
+          <RowCarousel title="Overzicht" items={filtered.Overzicht} onPreview={setPreviewApp} />
         </div>
       </motion.div>
     </div>

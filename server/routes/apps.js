@@ -35,18 +35,31 @@ router.get('/apps', async (req, res) => {
   try {
     ensureValidCategory(category);
     const [rows] = await pool.query('SELECT * FROM apps WHERE category = ? ORDER BY created_at DESC', [category]);
-    res.json(rows);
+    
+    const baseUrl = process.env.API_URL || 'http://localhost:3001';
+    const updatedRows = rows.map(row => {
+      if (row.image_url) {
+        // Handle both relative and absolute URLs
+        row.image_url = row.image_url.startsWith('http')
+          ? row.image_url
+          : `${baseUrl}${row.image_url.startsWith('/') ? '' : '/'}${row.image_url}`;
+      }
+      return row;
+    });
+    
+    res.json(updatedRows);
   } catch (e) {
     res.status(e.status || 500).json({ error: e.message || 'Server error' });
   }
 });
 
-router.get('/apps/all', async (_req, res) => {
+router.get('/apps/all', async (req, res) => {
   try {
     console.log('Fetching all apps from database...');
     const [rows] = await pool.query('SELECT * FROM apps ORDER BY created_at DESC');
     console.log('Got apps from database:', rows);
     
+    const baseUrl = process.env.API_URL || 'http://localhost:3001';
     const grouped = {
       Personeel: [],
       Administratie: [],
@@ -54,7 +67,19 @@ router.get('/apps/all', async (_req, res) => {
       Overzicht: []
     };
     
-    for (const row of rows) {
+    // Update all image URLs to be absolute URLs
+    const updatedRows = rows.map(row => {
+      if (row.image_url) {
+        // Handle both relative and absolute URLs
+        row.image_url = row.image_url.startsWith('http')
+          ? row.image_url
+          : `${baseUrl}${row.image_url.startsWith('/') ? '' : '/'}${row.image_url}`;
+      }
+      return row;
+    });
+    
+    // Group the updated rows
+    for (const row of updatedRows) {
       if (grouped[row.category]) {
         grouped[row.category].push(row);
       }
@@ -79,9 +104,8 @@ router.post('/apps', requireAuth, upload.single('image'), async (req, res) => {
 
     let image_url = null;
     if (req.file) {
-      // Gebruik volledige URL voor afbeeldingen
-      const baseUrl = process.env.API_URL || 'http://localhost:3001';
-      image_url = `${baseUrl}/uploads/${req.file.filename}`;
+      // Store relative URL
+      image_url = `/uploads/${req.file.filename}`;
       console.log('Setting image URL:', image_url);
     }
 

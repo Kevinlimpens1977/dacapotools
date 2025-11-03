@@ -24,9 +24,18 @@ const origin = process.env.FRONTEND_ORIGIN || '*';
 app.use(cors({ origin, credentials: true }));
 
 // Static uploads - met logging
+app.use('/uploads', express.static(uploadsDir));
 app.use('/uploads', (req, res, next) => {
   console.log('Requesting upload:', req.url);
-  express.static(uploadsDir)(req, res, next);
+  const filePath = path.join(uploadsDir, req.url);
+  if (fs.existsSync(filePath)) {
+    res.header('Cache-Control', 'public, max-age=31536000');
+    res.header('Access-Control-Allow-Origin', process.env.FRONTEND_ORIGIN || '*');
+    next();
+  } else {
+    console.log('File not found:', filePath);
+    res.status(404).send('File not found');
+  }
 });
 
 // Routes
