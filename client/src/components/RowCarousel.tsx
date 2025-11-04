@@ -75,7 +75,7 @@ export default function RowCarousel({ title, items, onPreview }: RowCarouselProp
   const progress = scrollWidth > 0 ? (scrollPosition / scrollWidth) * 100 : 0;
 
   return (
-    <div className="py-6 px-4 sm:px-8 mb-8 border-3 border-green-700 rounded-2xl bg-gradient-to-br from-green-50 to-emerald-50 backdrop-blur-sm shadow-md" style={{ borderWidth: '3px' }}>
+    <div className="py-6 px-4 sm:px-8 mb-8 border-2 border-green-700 rounded-2xl bg-gradient-to-br from-green-50 to-emerald-50 backdrop-blur-sm shadow-md relative" style={{ borderWidth: '2px' }}>
       <div className="mb-6">
         <h2 className="text-xl font-medium text-gray-800 flex items-center gap-2">
           {title}
@@ -83,67 +83,68 @@ export default function RowCarousel({ title, items, onPreview }: RowCarouselProp
         </h2>
       </div>
       
+      {/* Navigation buttons - fixed on container edges */}
+      {showLeftButton && (
+        <motion.button
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          whileHover={{
+            backgroundColor: "rgb(21 128 61)",
+            borderColor: "rgb(22 101 52)",
+            boxShadow: "0 0 25px rgba(21, 128, 61, 0.6)"
+          }}
+          whileTap={{ scale: 0.95 }}
+          transition={{
+            duration: 0.3,
+            ease: "easeInOut"
+          }}
+          className="absolute left-4 top-1/2 -translate-y-1/2 z-20 p-3 bg-white/95 backdrop-blur-sm border-green-700 rounded-full shadow-xl group"
+          style={{ borderWidth: '4px' }}
+          onClick={() => scroll('left')}
+        >
+          <motion.svg
+            className="w-7 h-7 text-green-700 group-hover:text-white"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            strokeWidth={3}
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+          </motion.svg>
+        </motion.button>
+      )}
+      
+      {showRightButton && (
+        <motion.button
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          whileHover={{
+            backgroundColor: "rgb(21 128 61)",
+            borderColor: "rgb(22 101 52)",
+            boxShadow: "0 0 25px rgba(21, 128, 61, 0.6)"
+          }}
+          whileTap={{ scale: 0.95 }}
+          transition={{
+            duration: 0.3,
+            ease: "easeInOut"
+          }}
+          className="absolute right-4 top-1/2 -translate-y-1/2 z-20 p-3 bg-white/95 backdrop-blur-sm border-green-700 rounded-full shadow-xl group"
+          style={{ borderWidth: '4px' }}
+          onClick={() => scroll('right')}
+        >
+          <motion.svg
+            className="w-7 h-7 text-green-700 group-hover:text-white"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            strokeWidth={3}
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+          </motion.svg>
+        </motion.button>
+      )}
+      
       <div className="relative">
-        {showLeftButton && (
-          <motion.button
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            whileHover={{
-              backgroundColor: "rgb(21 128 61)",
-              borderColor: "rgb(22 101 52)",
-              boxShadow: "0 0 25px rgba(21, 128, 61, 0.6)"
-            }}
-            whileTap={{ scale: 0.95 }}
-            transition={{
-              duration: 0.3,
-              ease: "easeInOut"
-            }}
-            className="absolute left-0 top-1/2 -translate-y-1/2 z-10 p-3 bg-white/95 backdrop-blur-sm border-green-700 rounded-full shadow-xl group"
-            style={{ borderWidth: '4px' }}
-            onClick={() => scroll('left')}
-          >
-            <motion.svg
-              className="w-7 h-7 text-green-700 group-hover:text-white"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth={3}
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-            </motion.svg>
-          </motion.button>
-        )}
-        
-        {showRightButton && (
-          <motion.button
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            whileHover={{
-              backgroundColor: "rgb(21 128 61)",
-              borderColor: "rgb(22 101 52)",
-              boxShadow: "0 0 25px rgba(21, 128, 61, 0.6)"
-            }}
-            whileTap={{ scale: 0.95 }}
-            transition={{
-              duration: 0.3,
-              ease: "easeInOut"
-            }}
-            className="absolute right-0 top-1/2 -translate-y-1/2 z-10 p-3 bg-white/95 backdrop-blur-sm border-green-700 rounded-full shadow-xl group"
-            style={{ borderWidth: '4px' }}
-            onClick={() => scroll('right')}
-          >
-            <motion.svg
-              className="w-7 h-7 text-green-700 group-hover:text-white"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth={3}
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-            </motion.svg>
-          </motion.button>
-        )}
-
         <div
           ref={carouselRef}
           className="flex gap-4 overflow-x-auto px-12 sm:px-16 pb-4 no-scrollbar relative"
@@ -180,9 +181,9 @@ export default function RowCarousel({ title, items, onPreview }: RowCarouselProp
         </div>
 
         {/* Progress bar */}
-        <div className="absolute bottom-0 left-12 right-12 sm:left-16 sm:right-16 h-2 bg-orange-100/60 rounded-full overflow-hidden backdrop-blur-sm border border-orange-200">
+        <div className="absolute bottom-0 left-12 right-12 sm:left-16 sm:right-16 h-2 bg-green-100/60 rounded-full overflow-hidden backdrop-blur-sm border border-green-200">
           <div
-            className="absolute top-0 left-0 h-full bg-gradient-to-r from-orange-500 to-amber-500 transition-all duration-300 ease-out shadow-sm"
+            className="absolute top-0 left-0 h-full bg-gradient-to-r from-green-600 to-emerald-500 transition-all duration-300 ease-out shadow-sm"
             style={{ width: `${progress}%` }}
           />
         </div>

@@ -21,8 +21,8 @@ export default function AppTile({ app, onMouseEnter, onClick, preview = false, o
 
   return (
     <motion.div
-      className={`flex-shrink-0 ${preview ? 'w-full' : 'w-48 sm:w-56'} bg-white rounded-xl shadow-md hover:shadow-lg transition-all duration-300 overflow-hidden border-3 border-orange-300/60 hover:border-orange-400/80 ${preview ? '' : 'cursor-pointer'}`}
-      style={{ borderWidth: '3px' }}
+      className={`flex-shrink-0 ${preview ? 'w-full' : 'w-48 sm:w-56'} bg-white rounded-xl shadow-md hover:shadow-lg transition-all duration-300 overflow-hidden border-2 border-orange-300/60 hover:border-orange-400/80 ${preview ? '' : 'cursor-pointer'}`}
+      style={{ borderWidth: '2px' }}
       whileHover={preview ? undefined : { scale: 1.02, y: -2 }}
       whileTap={preview ? undefined : { scale: 0.98 }}
       onMouseEnter={onMouseEnter}

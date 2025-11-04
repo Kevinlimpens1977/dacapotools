@@ -74,8 +74,8 @@ export default function Dashboard() {
             {/* Close Button */}
             <button
               onClick={() => setPreviewApp(null)}
-              className="absolute -top-3 -right-3 z-10 w-10 h-10 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center shadow-xl transition-all border-3 border-red-400 hover:scale-110"
-              style={{ borderWidth: '3px' }}
+              className="absolute -top-3 -right-3 z-10 w-10 h-10 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center shadow-xl transition-all border-2 border-red-400 hover:scale-110"
+              style={{ borderWidth: '2px' }}
               aria-label="Sluiten"
             >
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={3}>
@@ -87,20 +87,60 @@ export default function Dashboard() {
         </div>
       )}
 
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, ease: "easeOut" }}
-        className="max-w-[95rem] mx-auto py-8"
-      >
-        {/* Categories */}
-        <div className="space-y-6">
-          <RowCarousel title="Personeel" items={filtered.Personeel} onPreview={setPreviewApp} />
-          <RowCarousel title="Administratie" items={filtered.Administratie} onPreview={setPreviewApp} />
-          <RowCarousel title="MT" items={filtered.MT} onPreview={setPreviewApp} />
-          <RowCarousel title="Overzicht" items={filtered.Overzicht} onPreview={setPreviewApp} />
+      <div className="flex gap-4 py-8">
+        {/* Main content area - takes remaining space */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, ease: "easeOut" }}
+          className="flex-1 min-w-0"
+        >
+          {/* Categories */}
+          <div className="space-y-6">
+            <RowCarousel title="Personeel" items={filtered.Personeel} onPreview={setPreviewApp} />
+            <RowCarousel title="Administratie" items={filtered.Administratie} onPreview={setPreviewApp} />
+            <RowCarousel title="MT" items={filtered.MT} onPreview={setPreviewApp} />
+            <RowCarousel title="Overzicht" items={filtered.Overzicht} onPreview={setPreviewApp} />
+          </div>
+        </motion.div>
+
+        {/* Mascotte - Sidebar on the right */}
+        <div className="hidden xl:block flex-shrink-0 w-72">
+          <motion.div
+            className="bg-white border-4 border-orange-500 rounded-2xl p-4 shadow-2xl sticky bottom-8"
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.8, ease: "easeOut", delay: 0.5 }}
+            whileHover={{ scale: 1.05 }}
+            style={{ marginTop: 'auto' }}
+          >
+            <h3 className="text-black font-bold text-base mb-2 text-center">DaCapo Tools</h3>
+            <img
+              src="/images/mascotte.png"
+              alt="DaCapo Tools Mascotte"
+              className="w-40 h-40 object-contain mx-auto"
+            />
+          </motion.div>
         </div>
-      </motion.div>
+
+        {/* Mascotte - Fixed bottom-right for smaller screens */}
+        <div className="xl:hidden fixed bottom-0 right-0 z-40 max-w-[35vw] sm:max-w-[30vw] md:max-w-[28vw] lg:max-w-[25vw]">
+          <motion.div
+            className="bg-white border-3 border-orange-500 rounded-xl sm:rounded-2xl p-1.5 sm:p-2 md:p-3 shadow-2xl"
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.8, ease: "easeOut", delay: 0.5 }}
+            whileHover={{ scale: 1.05 }}
+          >
+            <h3 className="text-black font-bold text-[10px] sm:text-xs md:text-sm mb-1 text-center">DaCapo Tools</h3>
+            <img
+              src="/images/mascotte.png"
+              alt="DaCapo Tools Mascotte"
+              className="w-24 h-24 sm:w-28 sm:h-28 md:w-32 md:h-32 lg:w-40 lg:h-40 object-contain"
+            />
+          </motion.div>
+        </div>
+      </div>
     </div>
   )
 }

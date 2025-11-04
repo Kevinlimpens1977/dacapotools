@@ -190,7 +190,7 @@ export default function Admin() {
       <div className="max-w-screen-xl mx-auto px-4 py-12 space-y-8">
         <h1 className="text-3xl font-bold bg-gradient-to-r from-green-700 to-emerald-700 bg-clip-text text-transparent">Admin Panel</h1>
 
-        <div className="bg-white rounded-2xl p-8 shadow-lg border-3 border-green-700" style={{ borderWidth: '3px' }}>
+        <div className="bg-white rounded-2xl p-8 shadow-lg border-2 border-green-700" style={{ borderWidth: '2px' }}>
           <h2 className="text-xl font-semibold text-gray-900 mb-6">Add New App</h2>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
@@ -248,8 +248,8 @@ export default function Admin() {
                     <img 
                       src={imagePreview || pastedUrl || ''} 
                       alt="Preview" 
-                      className="max-h-48 rounded-xl border-3 border-green-700 shadow-lg"
-                      style={{ borderWidth: '3px' }}
+                      className="max-h-48 rounded-xl border-2 border-green-700 shadow-lg"
+                      style={{ borderWidth: '2px' }}
                     />
                     <button
                       type="button"
@@ -329,7 +329,7 @@ export default function Admin() {
           </form>
         </div>
 
-        <div className="bg-white rounded-2xl p-8 shadow-lg border-3 border-green-700 space-y-4" style={{ borderWidth: '3px' }}>
+        <div className="bg-white rounded-2xl p-8 shadow-lg border-2 border-green-700 space-y-4" style={{ borderWidth: '2px' }}>
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-semibold bg-gradient-to-r from-green-700 to-emerald-700 bg-clip-text text-transparent">All Apps</h2>
             <div className="flex items-center gap-3">
@@ -370,7 +370,7 @@ export default function Admin() {
                 </div>
                 <button
                   onClick={() => handleDelete(app.id)}
-                  className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors border-2 border-red-500 font-semibold shadow hover:shadow-lg"
+                  className="px-4 py-2 bg-orange-100 text-orange-700 rounded-lg hover:bg-orange-200 transition-colors border-2 border-orange-300 font-semibold shadow hover:shadow-lg"
                 >
                   Delete
                 </button>
