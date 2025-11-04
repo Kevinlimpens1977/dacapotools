@@ -1,0 +1,27 @@
+<<<<<<< HEAD
+# Root ignores
+node_modules/
+.DS_Store
+Thumbs.db
+.env
+.env.*
+uploads/
+**/dist/
+**/.vite/
+**/.turbo/
+**/.next/
+**/.cache/
+=======
+#Template for AL projects for Dynamics 365 Business Central
+#launch.json folder
+.vscode/
+#Cache folder
+.alcache/
+#Symbols folder
+.alpackages/
+#Snapshots folder
+.snapshots/
+#Testing Output folder
+.output/
+#Extension App-file
+#Extension App-file

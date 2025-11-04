@@ -1,0 +1,23 @@
+{
+  "name": "dacapotools",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\"",
+    "dev:server": "cd server && npm run dev",
+    "dev:client": "cd client && npm run dev",
+    "build": "npm run build:client",
+    "build:client": "cd client && npm run build",
+    "start": "NODE_ENV=production node server/index.js",
+    "install:all": "npm install && cd server && npm install && cd ../client && npm install",
+    "docker:build": "docker build -t dacapotools .",
+    "docker:run": "docker run -p 3000:3000 --env-file .env.production dacapotools"
+  },
+  "dependencies": {
+    "mysql2": "^3.15.3"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}
