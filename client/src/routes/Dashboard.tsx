@@ -59,7 +59,7 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-white px-4 sm:px-8">
+    <div className="min-h-screen bg-gradient-to-br from-orange-50 via-amber-50 to-white px-4 sm:px-8">
       
       {/* Preview Modal */}
       {previewApp && (
@@ -68,10 +68,21 @@ export default function Dashboard() {
           onClick={() => setPreviewApp(null)}
         >
           <div
-            className="max-w-2xl w-full"
+            className="max-w-2xl w-full relative"
             onClick={e => e.stopPropagation()}
           >
-            <AppTile app={previewApp} preview />
+            {/* Close Button */}
+            <button
+              onClick={() => setPreviewApp(null)}
+              className="absolute -top-3 -right-3 z-10 w-10 h-10 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center shadow-xl transition-all border-3 border-red-400 hover:scale-110"
+              style={{ borderWidth: '3px' }}
+              aria-label="Sluiten"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={3}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+            <AppTile app={previewApp} preview onClose={() => setPreviewApp(null)} />
           </div>
         </div>
       )}

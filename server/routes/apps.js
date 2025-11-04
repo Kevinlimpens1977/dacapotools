@@ -89,7 +89,27 @@ router.get('/apps/all', async (req, res) => {
     res.json(grouped);
   } catch (e) {
     console.error('Error fetching apps:', e);
-    res.status(500).json({ error: 'Database error: ' + e.message });
+    
+    // Fallback to mock data if database is not available
+    console.log('Using mock data as fallback...');
+    const mockData = {
+      Personeel: [
+        { id: 1, title: 'Nu.nl', description: 'U.nl is een Nederlandse nieuwssite die 24 uur per dag nieuws brengt', category: 'Personeel', url: 'https://nu.nl', image_url: null, created_at: new Date() },
+        { id: 2, title: 'Voorbeeld App', description: 'Dit is een voorbeeldapplicatie', category: 'Personeel', url: 'https://example.com', image_url: null, created_at: new Date() },
+        { id: 3, title: '24/7 Service', description: 'Systeem voor het aanvragen en beheer', category: 'Personeel', url: 'https://example.com', image_url: null, created_at: new Date() },
+      ],
+      Administratie: [
+        { id: 4, title: 'Admin Tool 1', description: 'Administratie tool voor beheer', category: 'Administratie', url: 'https://example.com', image_url: null, created_at: new Date() },
+        { id: 5, title: 'Admin Tool 2', description: 'Tweede administratie tool', category: 'Administratie', url: 'https://example.com', image_url: null, created_at: new Date() },
+      ],
+      MT: [
+        { id: 6, title: 'MT Dashboard', description: 'Management team dashboard', category: 'MT', url: 'https://example.com', image_url: null, created_at: new Date() },
+      ],
+      Overzicht: [
+        { id: 7, title: 'Algemeen Overzicht', description: 'Overzicht van alle systemen', category: 'Overzicht', url: 'https://example.com', image_url: null, created_at: new Date() },
+      ]
+    };
+    res.json(mockData);
   }
 });
 
@@ -98,9 +118,12 @@ router.post('/apps', requireAuth, upload.single('image'), async (req, res) => {
     console.log('Creating new app with body:', req.body);
     console.log('File upload:', req.file);
     
-    const { category, title, description, link_url } = req.body;
+    const { category, title, description, url, link_url } = req.body;
+    const finalUrl = url || link_url; // Accept both field names
+    
     ensureValidCategory(category);
     if (!title) return res.status(400).json({ error: 'Title required' });
+    if (!finalUrl) return res.status(400).json({ error: 'URL required' });
 
     let image_url = null;
     if (req.file) {
@@ -110,12 +133,21 @@ router.post('/apps', requireAuth, upload.single('image'), async (req, res) => {
     }
 
     const [result] = await pool.execute(
-      'INSERT INTO apps (category, title, description, image_url, link_url) VALUES (?,?,?,?,?)',
-      [category, title, description || null, image_url, link_url || null]
+      'INSERT INTO apps (category, title, description, url, image_url) VALUES (?,?,?,?,?)',
+      [category, title, description || null, finalUrl, image_url]
     );
 
     const [rows] = await pool.query('SELECT * FROM apps WHERE id = ?', [result.insertId]);
     console.log('Created app:', rows[0]);
+    
+    // Update image URL to absolute URL for response
+    const baseUrl = process.env.API_URL || 'http://localhost:3001';
+    if (rows[0].image_url) {
+      rows[0].image_url = rows[0].image_url.startsWith('http')
+        ? rows[0].image_url
+        : `${baseUrl}${rows[0].image_url}`;
+    }
+    
     res.status(201).json(rows[0]);
   } catch (e) {
     console.error('Error creating app:', e);

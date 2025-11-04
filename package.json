@@ -1,27 +1,23 @@
 {
-  "name": "dacapotoolbox",
+  "name": "dacapotools",
+  "version": "1.0.0",
   "private": true,
-  "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "tsc && vite build",
-    "preview": "vite preview"
+    "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\"",
+    "dev:server": "cd server && npm run dev",
+    "dev:client": "cd client && npm run dev",
+    "build": "npm run build:client",
+    "build:client": "cd client && npm run build",
+    "start": "NODE_ENV=production node server/index.js",
+    "install:all": "npm install && cd server && npm install && cd ../client && npm install",
+    "docker:build": "docker build -t dacapotools .",
+    "docker:run": "docker run -p 3000:3000 --env-file .env.production dacapotools"
   },
   "dependencies": {
-    "@types/axios": "^0.9.36",
-    "axios": "^1.13.1",
-    "cors": "^2.8.5",
-    "express": "^5.1.0",
-    "mysql2": "^3.15.3",
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0"
+    "mysql2": "^3.15.3"
   },
   "devDependencies": {
-    "@types/react": "^18.2.15",
-    "@types/react-dom": "^18.2.7",
-    "@vitejs/plugin-react": "^4.0.3",
-    "typescript": "^5.0.2",
-    "vite": "^4.4.5"
+    "concurrently": "^8.2.2"
   }
 }

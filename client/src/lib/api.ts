@@ -11,7 +11,10 @@ export const api = axios.create({
 // Add auth token to requests if available
 api.interceptors.request.use(config => {
   const token = localStorage.getItem('token')
-  if (token && config.headers) {
+  if (token) {
+    if (!config.headers) {
+      config.headers = {}
+    }
     config.headers.Authorization = `Bearer ${token}`
   }
   return config
@@ -38,7 +41,9 @@ export async function getAllAppsGrouped(): Promise<AppsGrouped> {
 
 export async function createApp(data: FormData): Promise<App> {
   const res = await api.post<App>('/apps', data, {
-    headers: { 'Content-Type': 'multipart/form-data' }
+    headers: { 
+      'Content-Type': 'multipart/form-data'
+    }
   })
   return res.data
 }
@@ -54,7 +59,9 @@ export async function pasteImage(base64: string, filename?: string): Promise<Pas
 
 export async function updateApp(id: number, data: FormData): Promise<App> {
   const res = await api.put<App>(`/apps/${id}`, data, {
-    headers: { 'Content-Type': 'multipart/form-data' }
+    headers: { 
+      'Content-Type': 'multipart/form-data'
+    }
   })
   return res.data
 }

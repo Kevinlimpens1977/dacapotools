@@ -75,11 +75,11 @@ export default function RowCarousel({ title, items, onPreview }: RowCarouselProp
   const progress = scrollWidth > 0 ? (scrollPosition / scrollWidth) * 100 : 0;
 
   return (
-    <div className="py-6 px-4 sm:px-8 mb-8 border-2 border-emerald-600/20 rounded-2xl bg-white/50 backdrop-blur-sm">
+    <div className="py-6 px-4 sm:px-8 mb-8 border-3 border-green-700 rounded-2xl bg-gradient-to-br from-green-50 to-emerald-50 backdrop-blur-sm shadow-md" style={{ borderWidth: '3px' }}>
       <div className="mb-6">
         <h2 className="text-xl font-medium text-gray-800 flex items-center gap-2">
           {title}
-          <span className="text-sm font-normal text-gray-400">({items.length} items)</span>
+          <span className="text-sm font-normal text-gray-500">({items.length} items)</span>
         </h2>
       </div>
       
@@ -89,28 +89,27 @@ export default function RowCarousel({ title, items, onPreview }: RowCarouselProp
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             whileHover={{
-              scale: 1.2,
-              backgroundColor: "rgb(16 185 129 / 0.15)",
-              boxShadow: "0 0 20px rgba(16, 185, 129, 0.3)"
+              backgroundColor: "rgb(21 128 61)",
+              borderColor: "rgb(22 101 52)",
+              boxShadow: "0 0 25px rgba(21, 128, 61, 0.6)"
             }}
             whileTap={{ scale: 0.95 }}
             transition={{
-              type: "spring",
-              stiffness: 400,
-              damping: 25
+              duration: 0.3,
+              ease: "easeInOut"
             }}
-            className="absolute left-0 top-1/2 -translate-y-1/2 z-10 p-3 bg-white/90 backdrop-blur-sm border-2 border-emerald-600 rounded-full shadow-lg group"
+            className="absolute left-0 top-1/2 -translate-y-1/2 z-10 p-3 bg-white/95 backdrop-blur-sm border-green-700 rounded-full shadow-xl group"
+            style={{ borderWidth: '4px' }}
             onClick={() => scroll('left')}
           >
             <motion.svg
-              className="w-6 h-6 text-emerald-600 group-hover:text-emerald-700 group-hover:fill-emerald-50"
+              className="w-7 h-7 text-green-700 group-hover:text-white"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
-              whileHover={{ rotate: -15 }}
-              transition={{ type: "spring", stiffness: 400 }}
+              strokeWidth={3}
             >
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
             </motion.svg>
           </motion.button>
         )}
@@ -120,28 +119,27 @@ export default function RowCarousel({ title, items, onPreview }: RowCarouselProp
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             whileHover={{
-              scale: 1.2,
-              backgroundColor: "rgb(16 185 129 / 0.15)",
-              boxShadow: "0 0 20px rgba(16, 185, 129, 0.3)"
+              backgroundColor: "rgb(21 128 61)",
+              borderColor: "rgb(22 101 52)",
+              boxShadow: "0 0 25px rgba(21, 128, 61, 0.6)"
             }}
             whileTap={{ scale: 0.95 }}
             transition={{
-              type: "spring",
-              stiffness: 400,
-              damping: 25
+              duration: 0.3,
+              ease: "easeInOut"
             }}
-            className="absolute right-0 top-1/2 -translate-y-1/2 z-10 p-3 bg-white/90 backdrop-blur-sm border-2 border-emerald-600 rounded-full shadow-lg group"
+            className="absolute right-0 top-1/2 -translate-y-1/2 z-10 p-3 bg-white/95 backdrop-blur-sm border-green-700 rounded-full shadow-xl group"
+            style={{ borderWidth: '4px' }}
             onClick={() => scroll('right')}
           >
             <motion.svg
-              className="w-6 h-6 text-emerald-600 group-hover:text-emerald-700 group-hover:fill-emerald-50"
+              className="w-7 h-7 text-green-700 group-hover:text-white"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
-              whileHover={{ rotate: 15 }}
-              transition={{ type: "spring", stiffness: 400 }}
+              strokeWidth={3}
             >
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
             </motion.svg>
           </motion.button>
         )}
@@ -149,6 +147,7 @@ export default function RowCarousel({ title, items, onPreview }: RowCarouselProp
         <div
           ref={carouselRef}
           className="flex gap-4 overflow-x-auto px-12 sm:px-16 pb-4 no-scrollbar relative"
+          style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
           onScroll={(e) => setScrollPosition(e.currentTarget.scrollLeft)}
         >
           {items.map((app) => (
@@ -181,9 +180,9 @@ export default function RowCarousel({ title, items, onPreview }: RowCarouselProp
         </div>
 
         {/* Progress bar */}
-        <div className="absolute bottom-0 left-12 right-12 sm:left-16 sm:right-16 h-1.5 bg-emerald-100/50 rounded-full overflow-hidden backdrop-blur-sm">
+        <div className="absolute bottom-0 left-12 right-12 sm:left-16 sm:right-16 h-2 bg-orange-100/60 rounded-full overflow-hidden backdrop-blur-sm border border-orange-200">
           <div
-            className="absolute top-0 left-0 h-full bg-emerald-600 transition-all duration-300 ease-out"
+            className="absolute top-0 left-0 h-full bg-gradient-to-r from-orange-500 to-amber-500 transition-all duration-300 ease-out shadow-sm"
             style={{ width: `${progress}%` }}
           />
         </div>

@@ -6,9 +6,10 @@ interface AppTileProps {
   onMouseEnter?: () => void;
   onClick?: () => void;
   preview?: boolean;
+  onClose?: () => void;
 }
 
-export default function AppTile({ app, onMouseEnter, onClick, preview = false }: AppTileProps) {
+export default function AppTile({ app, onMouseEnter, onClick, preview = false, onClose }: AppTileProps) {
   const handleClick = () => {
     if (preview) return;
     if (onClick) {
@@ -20,13 +21,14 @@ export default function AppTile({ app, onMouseEnter, onClick, preview = false }:
 
   return (
     <motion.div
-      className={`flex-shrink-0 ${preview ? 'w-96' : 'w-48 sm:w-56'} bg-white rounded-xl shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden border-2 border-emerald-600/30 hover:border-emerald-500/50 ${preview ? '' : 'cursor-pointer'}`}
+      className={`flex-shrink-0 ${preview ? 'w-full' : 'w-48 sm:w-56'} bg-white rounded-xl shadow-md hover:shadow-lg transition-all duration-300 overflow-hidden border-3 border-orange-300/60 hover:border-orange-400/80 ${preview ? '' : 'cursor-pointer'}`}
+      style={{ borderWidth: '3px' }}
       whileHover={preview ? undefined : { scale: 1.02, y: -2 }}
       whileTap={preview ? undefined : { scale: 0.98 }}
       onMouseEnter={onMouseEnter}
       onClick={handleClick}
     >
-      <div className="aspect-video w-full bg-gray-100 relative flex items-center justify-center">
+      <div className={`${preview ? 'aspect-video' : 'aspect-video'} w-full bg-gradient-to-br from-orange-50 to-amber-50 relative flex items-center justify-center`}>
         {app.image_url ? (
           <img
             src={app.image_url}
@@ -38,8 +40,8 @@ export default function AppTile({ app, onMouseEnter, onClick, preview = false }:
               const parent = e.currentTarget.parentElement;
               if (parent) {
                 parent.innerHTML = `
-                  <div class="w-16 h-16 rounded-full bg-emerald-100 flex items-center justify-center">
-                    <span class="text-2xl font-medium text-emerald-600">
+                  <div class="w-16 h-16 rounded-full bg-orange-100 flex items-center justify-center border-2 border-orange-300">
+                    <span class="text-2xl font-medium text-orange-600">
                       ${app.title.charAt(0).toUpperCase()}
                     </span>
                   </div>
@@ -50,22 +52,26 @@ export default function AppTile({ app, onMouseEnter, onClick, preview = false }:
             }}
           />
         ) : (
-          <div className="w-16 h-16 rounded-full bg-emerald-100 flex items-center justify-center">
-            <span className="text-2xl font-medium text-emerald-600">
+          <div className="w-16 h-16 rounded-full bg-orange-100 border-2 border-orange-300 flex items-center justify-center">
+            <span className="text-2xl font-medium text-orange-600">
               {app.title.charAt(0).toUpperCase()}
             </span>
           </div>
         )}
       </div>
-      <div className="p-4">
-        <h3 className="font-medium text-gray-900 mb-1 line-clamp-1">{app.title}</h3>
-        <p className={`text-sm text-gray-500 ${preview ? '' : 'line-clamp-2'}`}>{app.description}</p>
+      <div className={`${preview ? 'p-6 bg-gradient-to-br from-orange-50/50 to-amber-50/50' : 'p-4 bg-gradient-to-br from-orange-50/30 to-amber-50/30'}`}>
+        <h3 className={`font-medium text-gray-900 mb-2 ${preview ? 'text-2xl' : 'line-clamp-1'}`}>
+          {app.title}
+        </h3>
+        <p className={`text-sm text-gray-600 ${preview ? 'whitespace-pre-wrap break-words' : 'line-clamp-2'}`}>
+          {app.description}
+        </p>
         {preview && app.link_url && (
           <a 
             href={app.link_url}
             target="_blank"
             rel="noopener noreferrer"
-            className="mt-4 inline-block text-emerald-600 hover:text-emerald-700"
+            className="mt-4 inline-block px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors border-2 border-orange-400 shadow-md"
           >
             Open applicatie →
           </a>
