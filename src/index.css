@@ -1,0 +1,75 @@
+@import "tailwindcss";
+
+/* Custom CSS variables for theming */
+:root {
+  --primary: #2860E0;
+  --primary-dark: #1C4DAB;
+  --background-light: #F8FAFC;
+  --background-dark: #111827;
+  --card-light: #FFFFFF;
+  --card-dark: #374151;
+  --text-light: #1F2937;
+  --text-dark: #F3F4F6;
+  --text-secondary-light: #6B7280;
+  --text-secondary-dark: #9CA3AF;
+  --border-light: #E5E7EB;
+  --border-dark: #4B5563;
+}
+
+/* Light mode (default) */
+body {
+  background-color: var(--background-light);
+  color: var(--text-light);
+  font-family: 'Inter', sans-serif;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+/* Dark mode */
+body.dark {
+  background-color: var(--background-dark);
+  color: var(--text-dark);
+}
+
+/* Utility classes for theming */
+.bg-card {
+  background-color: var(--card-light);
+}
+
+.dark .bg-card {
+  background-color: var(--card-dark);
+}
+
+.text-secondary {
+  color: var(--text-secondary-light);
+}
+
+.dark .text-secondary {
+  color: var(--text-secondary-dark);
+}
+
+.border-theme {
+  border-color: var(--border-light);
+}
+
+.dark .border-theme {
+  border-color: var(--border-dark);
+}
+
+/* No scrollbar utility */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Material Symbols font adjustment */
+.material-symbols-outlined {
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+}
+
+.material-symbols-outlined.filled {
+  font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+}
