@@ -48,6 +48,12 @@ export function useTools() {
         try {
             const docRef = await addDoc(collection(db, 'tools'), {
                 ...toolData,
+                // Ensure new fields have defaults
+                slug: toolData.slug || '',
+                shortDescription: toolData.shortDescription || toolData.description || '',
+                fullDescription: toolData.fullDescription || '',
+                tags: toolData.tags || [],
+                status: toolData.status || 'draft',
                 isActive: true,
                 clickCount: 0,
                 favoriteCount: 0,

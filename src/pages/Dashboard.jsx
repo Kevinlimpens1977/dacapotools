@@ -31,13 +31,19 @@ export default function Dashboard() {
     };
 
     const filteredTools = useMemo(() => {
-        return activeTools.filter(tool => {
+        // First filter to only published tools (or tools without status for backwards compatibility)
+        const publishedTools = activeTools.filter(tool =>
+            tool.status === 'published' || !tool.status
+        );
+
+        return publishedTools.filter(tool => {
             // Search filter
             if (searchQuery) {
                 const query = searchQuery.toLowerCase();
                 const matchesName = tool.name?.toLowerCase().includes(query);
                 const matchesDesc = tool.description?.toLowerCase().includes(query);
-                if (!matchesName && !matchesDesc) return false;
+                const matchesShortDesc = tool.shortDescription?.toLowerCase().includes(query);
+                if (!matchesName && !matchesDesc && !matchesShortDesc) return false;
             }
 
             // Label filter
@@ -105,17 +111,24 @@ export default function Dashboard() {
                     </div>
 
                     {/* Tools Grid */}
-                    <div className="flex flex-col gap-2 px-4 pb-24">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 px-4 pb-24">
                         {isLoading ? (
-                            // Loading skeleton
-                            [...Array(5)].map((_, i) => (
+                            // Loading skeleton - now as cards
+                            [...Array(6)].map((_, i) => (
                                 <div
                                     key={i}
-                                    className="bg-card rounded-lg border border-theme p-3 h-16 animate-pulse"
-                                />
+                                    className="bg-card rounded-xl border border-theme overflow-hidden animate-pulse"
+                                >
+                                    <div className="w-full h-32 bg-gray-200 dark:bg-gray-700" />
+                                    <div className="p-4">
+                                        <div className="h-5 bg-gray-200 dark:bg-gray-700 rounded mb-2 w-3/4" />
+                                        <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded mb-4 w-full" />
+                                        <div className="h-10 bg-gray-200 dark:bg-gray-700 rounded w-full" />
+                                    </div>
+                                </div>
                             ))
                         ) : filteredTools.length === 0 ? (
-                            <div className="text-center py-12 text-secondary">
+                            <div className="col-span-full text-center py-12 text-secondary">
                                 <span className="material-symbols-outlined text-4xl mb-2 block">search_off</span>
                                 <p>Geen tools gevonden</p>
                                 {searchQuery && (
