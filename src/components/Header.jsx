@@ -6,7 +6,7 @@ import LoginModal from './LoginModal';
 
 export default function Header({ onSearchClick }) {
     const { isDarkMode, toggleTheme } = useTheme();
-    const { user, userData, isAdmin, signOut } = useAuth();
+    const { user, userData, userRole, signOut } = useAuth();
     const [showLoginModal, setShowLoginModal] = useState(false);
 
     return (
@@ -43,52 +43,15 @@ export default function Header({ onSearchClick }) {
                             </span>
                         </button>
 
-                        {/* Admin Actions (if admin) */}
-                        {isAdmin && (
-                            <div className="relative group">
-                                <button
-                                    className="flex items-center justify-center size-10 rounded-full bg-amber-500 text-white hover:bg-amber-600 transition-colors"
-                                    aria-label="Admin Menu"
-                                >
-                                    <span className="material-symbols-outlined">admin_panel_settings</span>
-                                </button>
-                                {/* Admin Dropdown */}
-                                <div className="absolute right-0 mt-2 w-56 bg-card border border-theme rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
-                                    <div className="p-2 border-b border-theme">
-                                        <p className="text-xs font-semibold text-secondary uppercase tracking-wide px-2">Admin Acties</p>
-                                    </div>
-                                    <div className="p-1">
-                                        <Link
-                                            to="/admin/tool/new"
-                                            className="w-full px-3 py-2 text-left hover:bg-gray-500/10 transition-colors flex items-center gap-3 rounded-md"
-                                        >
-                                            <span className="material-symbols-outlined text-green-500">add_circle</span>
-                                            <span>Tool Toevoegen</span>
-                                        </Link>
-                                        <Link
-                                            to="/admin"
-                                            className="w-full px-3 py-2 text-left hover:bg-gray-500/10 transition-colors flex items-center gap-3 rounded-md"
-                                        >
-                                            <span className="material-symbols-outlined text-blue-500">apps</span>
-                                            <span>Alle Tools Beheren</span>
-                                        </Link>
-                                        <Link
-                                            to="/admin/labels"
-                                            className="w-full px-3 py-2 text-left hover:bg-gray-500/10 transition-colors flex items-center gap-3 rounded-md"
-                                        >
-                                            <span className="material-symbols-outlined text-purple-500">label</span>
-                                            <span>Labels Beheren</span>
-                                        </Link>
-                                        <Link
-                                            to="/admin/stats"
-                                            className="w-full px-3 py-2 text-left hover:bg-gray-500/10 transition-colors flex items-center gap-3 rounded-md"
-                                        >
-                                            <span className="material-symbols-outlined text-orange-500">analytics</span>
-                                            <span>Statistieken</span>
-                                        </Link>
-                                    </div>
-                                </div>
-                            </div>
+                        {/* Admin Button (visible for admin/supervisor only) */}
+                        {userRole && userRole !== 'user' && (
+                            <Link
+                                to="/admin"
+                                className="flex items-center justify-center size-10 rounded-full bg-amber-500 text-white hover:bg-amber-600 transition-colors"
+                                aria-label="Admin Dashboard"
+                            >
+                                <span className="material-symbols-outlined">admin_panel_settings</span>
+                            </Link>
                         )}
 
                         {/* Profile / Login */}
@@ -108,7 +71,7 @@ export default function Header({ onSearchClick }) {
                                     )}
                                 </button>
                                 {/* Dropdown */}
-                                <div className="absolute right-0 mt-2 w-48 bg-card border border-theme rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
+                                <div className="absolute right-0 mt-2 w-48 max-w-[90vw] bg-card border border-theme rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 overflow-hidden">
                                     <div className="p-3 border-b border-theme">
                                         <p className="font-medium truncate">
                                             {userData?.displayName || user.displayName || user.email?.split('@')[0]}

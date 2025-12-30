@@ -14,8 +14,8 @@ export default function ImageCropper({ imageUrl, onCrop, onCancel, aspectRatio =
     const [imageSize, setImageSize] = useState({ width: 0, height: 0 });
     const [scale, setScale] = useState(1);
 
-    // Frame dimensions (fixed)
-    const frameWidth = 320;
+    // Frame dimensions (fixed) - 30% smaller than original
+    const frameWidth = 224;
     const frameHeight = frameWidth / aspectRatio;
 
     // Handle image load to calculate initial positioning

@@ -9,6 +9,8 @@ import {
 } from 'firebase/auth';
 import { doc, getDoc, setDoc, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
 import { auth, db, ADMIN_EMAIL } from '../firebase';
+import { getEffectiveRole, hasPermission as checkPermission, ROLES } from '../config/roles';
+import { useTheme } from './ThemeContext';
 
 const AuthContext = createContext();
 
@@ -18,7 +20,20 @@ export function AuthProvider({ children }) {
     const [loading, setLoading] = useState(true);
     const [authError, setAuthError] = useState(null);
 
-    const isAdmin = user?.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase();
+    // Theme context for loading/saving theme preference
+    const { setThemeFromPreference, getThemePreference } = useTheme();
+
+    // Compute role from Firestore role field (primary) or email fallback
+    const userRole = getEffectiveRole(userData?.role, user?.email);
+    const isAdmin = userRole === ROLES.ADMIN || userRole === ROLES.SUPERVISOR;
+    const isSupervisor = userRole === ROLES.SUPERVISOR;
+
+    /**
+     * Check if current user has a specific permission
+     * @param {string} permission - Permission key from roles.js
+     * @returns {boolean}
+     */
+    const hasPermission = (permission) => checkPermission(userRole, permission);
 
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
@@ -30,7 +45,10 @@ export function AuthProvider({ children }) {
                 const userSnap = await getDoc(userRef);
 
                 if (userSnap.exists()) {
-                    setUserData(userSnap.data());
+                    const data = userSnap.data();
+                    setUserData(data);
+                    // Apply user's theme preference (default to light if missing)
+                    setThemeFromPreference(data.themePreference || 'light');
                     // Update last login
                     await updateDoc(userRef, { lastLogin: new Date() });
                 } else {
@@ -142,9 +160,14 @@ export function AuthProvider({ children }) {
         }
     };
 
-    // Sign Out
+    // Sign Out - save theme preference before logging out
     const signOut = async () => {
         try {
+            // Save current theme preference to Firestore before signing out
+            if (user) {
+                const userRef = doc(db, 'users', user.uid);
+                await updateDoc(userRef, { themePreference: getThemePreference() });
+            }
             await firebaseSignOut(auth);
         } catch (error) {
             console.error('Error signing out:', error);
@@ -190,7 +213,12 @@ export function AuthProvider({ children }) {
             user,
             userData,
             loading,
+            // Role system
+            userRole,
             isAdmin,
+            isSupervisor,
+            hasPermission,
+            // Auth methods
             authError,
             signInWithEmail,
             registerWithEmail,

@@ -1,8 +1,11 @@
 import { useState, useRef, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTools } from '../hooks/useTools';
+import { getPrimaryLabelInfo, isExternalTool } from '../config/toolLabels';
 
 export default function ToolCard({ tool }) {
+    const navigate = useNavigate();
     const { user, isFavorite, toggleFavorite } = useAuth();
     const { updateFavoriteCount, trackToolClick } = useTools();
     const descriptionRef = useRef(null);
@@ -11,6 +14,8 @@ export default function ToolCard({ tool }) {
     const [scrollDistance, setScrollDistance] = useState(0);
 
     const favorite = isFavorite(tool.id);
+    const primaryLabel = getPrimaryLabelInfo(tool.labels);
+    const isExternal = isExternalTool(tool.labels);
 
     // Calculate scroll distance - comparing text height to container height
     useEffect(() => {
@@ -46,13 +51,20 @@ export default function ToolCard({ tool }) {
     };
 
     const handleToolClick = async () => {
-        if (tool.link) {
-            // Track the click before opening
-            const userId = user?.uid || 'anonymous';
-            await trackToolClick(tool.id, userId);
+        // Track the click
+        const userId = user?.uid || 'anonymous';
+        await trackToolClick(tool.id, userId);
 
-            // Open the tool in a new tab
-            window.open(tool.link, '_blank', 'noopener,noreferrer');
+        if (isExternal) {
+            // Open external tool in new tab
+            const url = tool.externalUrl || tool.url; // Support both new and legacy field
+            if (url) {
+                window.open(url, '_blank', 'noopener,noreferrer');
+            }
+        } else {
+            // Navigate to internal route
+            const route = tool.internalRoute || tool.url || `/app/${tool.id}`; // Fallback to ID-based route
+            navigate(route);
         }
     };
 
@@ -63,6 +75,7 @@ export default function ToolCard({ tool }) {
             className="group bg-card rounded-xl shadow-sm border border-theme overflow-hidden hover:shadow-lg hover:border-[#2860E0]/50 transition-all duration-300 cursor-pointer flex flex-col"
             onMouseEnter={() => setIsHovering(true)}
             onMouseLeave={() => setIsHovering(false)}
+            onClick={handleToolClick}
         >
             {/* Tool Image - Fixed aspect ratio with object-fit cover */}
             <div className="w-full aspect-[16/9] relative overflow-hidden bg-gray-100 dark:bg-gray-700">
@@ -70,11 +83,18 @@ export default function ToolCard({ tool }) {
                     <img
                         src={tool.imageUrl}
                         alt={tool.name}
-                        className="w-full h-full object-cover"
+                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                     />
                 ) : (
                     <div className="w-full h-full flex items-center justify-center">
                         <span className="material-symbols-outlined text-5xl text-gray-400">apps</span>
+                    </div>
+                )}
+
+                {/* External Indicator */}
+                {isExternal && (
+                    <div className="absolute top-2 left-2 size-8 bg-black/50 backdrop-blur-sm rounded-lg flex items-center justify-center text-white" title="Opent in een nieuw tabblad">
+                        <span className="material-symbols-outlined text-lg">open_in_new</span>
                     </div>
                 )}
 
@@ -101,7 +121,9 @@ export default function ToolCard({ tool }) {
             {/* Card Content */}
             <div className="p-4 flex flex-col flex-1">
                 {/* Title */}
-                <h3 className="font-semibold text-base mb-1 line-clamp-1">{tool.name}</h3>
+                <h3 className="font-semibold text-base mb-1 line-clamp-1 group-hover:text-[#2860E0] transition-colors">
+                    {tool.name}
+                </h3>
 
                 {/* Description with hover scroll */}
                 <div
@@ -123,14 +145,25 @@ export default function ToolCard({ tool }) {
                     </p>
                 </div>
 
-                {/* Action Button */}
-                <button
-                    onClick={handleToolClick}
-                    className="w-full py-2.5 px-4 bg-[#2860E0] hover:bg-[#1C4DAB] text-white font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
-                >
-                    <span className="material-symbols-outlined text-lg">open_in_new</span>
-                    Openen
-                </button>
+                {/* Footer: Labels & Action */}
+                <div className="flex items-center justify-between mt-auto pt-3 border-t border-theme">
+                    {/* Primary Label Badge */}
+                    {primaryLabel ? (
+                        <span
+                            className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full text-white font-medium"
+                            style={{ backgroundColor: primaryLabel.color }}
+                        >
+                            <span className="material-symbols-outlined text-[10px]">{primaryLabel.icon}</span>
+                            {primaryLabel.name}
+                        </span>
+                    ) : (
+                        <span></span>
+                    )}
+
+                    <span className={`material-symbols-outlined text-[#2860E0] transform transition-transform duration-300 ${isHovering ? 'translate-x-1' : ''}`}>
+                        {isExternal ? 'open_in_new' : 'arrow_forward'}
+                    </span>
+                </div>
             </div>
         </div>
     );

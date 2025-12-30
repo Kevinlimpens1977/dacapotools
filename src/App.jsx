@@ -2,10 +2,17 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { ThemeProvider } from './context/ThemeContext';
 import { AuthProvider } from './context/AuthContext';
 import Dashboard from './pages/Dashboard';
-import AdminDashboard from './pages/AdminDashboard';
-import AdminToolForm from './pages/AdminToolForm';
-import AdminLabels from './pages/AdminLabels';
-import AdminStats from './pages/AdminStats';
+
+// Admin Layout and Pages
+import AdminLayout from './components/admin/AdminLayout';
+import AdminOverview from './pages/admin/AdminOverview';
+import AdminTools from './pages/admin/AdminTools';
+import AdminToolForm from './pages/admin/AdminToolForm';
+import AdminUsers from './pages/admin/AdminUsers';
+import AdminCredits from './pages/admin/AdminCredits';
+import AdminCosts from './pages/admin/AdminCosts';
+import AdminLabels from './pages/admin/AdminLabels';
+import AdminReports from './pages/admin/AdminReports';
 
 export default function App() {
   return (
@@ -13,12 +20,21 @@ export default function App() {
       <ThemeProvider>
         <AuthProvider>
           <Routes>
+            {/* Public Routes */}
             <Route path="/" element={<Dashboard />} />
-            <Route path="/admin" element={<AdminDashboard />} />
-            <Route path="/admin/tool/:id" element={<AdminToolForm />} />
-            <Route path="/admin/tool/new" element={<AdminToolForm />} />
-            <Route path="/admin/labels" element={<AdminLabels />} />
-            <Route path="/admin/stats" element={<AdminStats />} />
+
+            {/* Protected Admin Routes */}
+            <Route path="/admin" element={<AdminLayout />}>
+              <Route index element={<AdminOverview />} />
+              <Route path="tools" element={<AdminTools />} />
+              <Route path="tools/:id" element={<AdminToolForm />} />
+              <Route path="tools/new" element={<AdminToolForm />} />
+              <Route path="users" element={<AdminUsers />} />
+              <Route path="credits" element={<AdminCredits />} />
+              <Route path="costs" element={<AdminCosts />} />
+              <Route path="labels" element={<AdminLabels />} />
+              <Route path="reports" element={<AdminReports />} />
+            </Route>
           </Routes>
         </AuthProvider>
       </ThemeProvider>

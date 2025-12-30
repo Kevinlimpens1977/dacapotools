@@ -46,19 +46,19 @@ function FavoriteTile({ tool }) {
     return (
         <button
             onClick={handleClick}
-            className="snap-start shrink-0 size-16 rounded-lg bg-card shadow-sm border border-theme flex flex-col items-center justify-center p-1 text-center hover:shadow-md transition-all duration-300"
+            className="snap-start shrink-0 size-20 rounded-xl bg-card shadow-sm border border-theme flex flex-col items-center justify-center p-2 text-center hover:shadow-md transition-all duration-300"
         >
             {tool.imageUrl ? (
                 <div
-                    className="size-8 rounded-md bg-cover bg-center"
+                    className="size-10 rounded-md bg-cover bg-center"
                     style={{ backgroundImage: `url('${tool.imageUrl}')` }}
                 />
             ) : (
-                <span className={`material-symbols-outlined text-2xl ${getIconColor()}`}>
+                <span className={`material-symbols-outlined text-3xl ${getIconColor()}`}>
                     {tool.icon || 'apps'}
                 </span>
             )}
-            <p className="text-xs font-medium mt-1 text-secondary truncate w-full px-1">
+            <p className="text-sm font-medium mt-1 text-secondary truncate w-full px-1">
                 {tool.name}
             </p>
         </button>
