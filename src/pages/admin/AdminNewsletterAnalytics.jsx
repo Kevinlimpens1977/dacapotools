@@ -7,7 +7,7 @@
  */
 
 import { useState, useEffect, useMemo } from 'react';
-import { collection, query, orderBy, limit, getDocs, where } from 'firebase/firestore';
+import { collection, query, orderBy, getDocs } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { useAuth } from '../../context/AuthContext';
 
@@ -116,6 +116,57 @@ export default function AdminNewsletterAnalytics() {
         }
         return weeks;
     }, [weekRange]);
+
+    // CSV Export Handlers
+    const downloadCSV = (data, filename) => {
+        const blob = new Blob([data], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+        link.setAttribute('href', url);
+        link.setAttribute('download', filename);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+
+    const exportItemsPerWeek = () => {
+        const date = new Date().toISOString().split('T')[0];
+        const csvRows = [
+            ['Week', 'Aantal Items'],
+            ...Object.entries(analytics.itemsByWeek).map(([week, count]) => [
+                `Week ${week}`,
+                count
+            ])
+        ];
+        const csvContent = csvRows.map(row => row.join(',')).join('\n');
+        downloadCSV(csvContent, `nieuwsbrief_per_week_${weekRange}w_${date}.csv`);
+    };
+
+    const exportItemsPerUser = () => {
+        const date = new Date().toISOString().split('T')[0];
+        const csvRows = [
+            ['Gebruiker', 'Aantal Submissions'],
+            ...Object.entries(analytics.itemsByUser)
+                .sort(([, a], [, b]) => b - a)
+                .map(([user, count]) => [user, count])
+        ];
+        const csvContent = csvRows.map(row => row.join(',')).join('\n');
+        downloadCSV(csvContent, `nieuwsbrief_per_user_${weekRange}w_${date}.csv`);
+    };
+
+    const exportDoelgroepDistribution = () => {
+        const date = new Date().toISOString().split('T')[0];
+        const csvRows = [
+            ['Doelgroep', 'Aantal Items'],
+            ...Object.entries(analytics.itemsByDoelgroep).map(([doelgroep, count]) => [
+                doelgroep,
+                count
+            ])
+        ];
+        const csvContent = csvRows.map(row => row.join(',')).join('\n');
+        downloadCSV(csvContent, `nieuwsbrief_doelgroep_${weekRange}w_${date}.csv`);
+    };
 
     if (!isAdmin) {
         return (
@@ -287,6 +338,37 @@ export default function AdminNewsletterAnalytics() {
                         </div>
                     )}
                 </div>
+            </div>
+
+            {/* Export Options */}
+            <div className="bg-card rounded-xl border border-theme p-5">
+                <h3 className="font-semibold mb-4">Exporteren</h3>
+                <div className="flex flex-wrap gap-3">
+                    <button
+                        onClick={exportItemsPerWeek}
+                        className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                    >
+                        <span className="material-symbols-outlined text-xl">download</span>
+                        Items per Week
+                    </button>
+                    <button
+                        onClick={exportItemsPerUser}
+                        className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                    >
+                        <span className="material-symbols-outlined text-xl">download</span>
+                        Items per Gebruiker
+                    </button>
+                    <button
+                        onClick={exportDoelgroepDistribution}
+                        className="inline-flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+                    >
+                        <span className="material-symbols-outlined text-xl">download</span>
+                        Doelgroep Verdeling
+                    </button>
+                </div>
+                <p className="text-sm text-secondary mt-3">
+                    Download analytics data als CSV bestand (periode: {weekRange} weken)
+                </p>
             </div>
 
             {/* Data Source Info */}
