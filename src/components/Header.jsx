@@ -47,10 +47,11 @@ export default function Header({ onSearchClick }) {
                         {userRole && userRole !== 'user' && (
                             <Link
                                 to="/admin"
-                                className="flex items-center justify-center size-10 rounded-full bg-amber-500 text-white hover:bg-amber-600 transition-colors"
+                                className="flex items-center gap-2 px-4 py-1.5 rounded-full bg-amber-500 text-white hover:bg-amber-600 transition-colors font-bold"
                                 aria-label="Admin Dashboard"
                             >
                                 <span className="material-symbols-outlined">admin_panel_settings</span>
+                                <span>ADMIN</span>
                             </Link>
                         )}
 

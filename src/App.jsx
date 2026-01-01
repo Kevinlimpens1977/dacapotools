@@ -13,6 +13,7 @@ import AdminCredits from './pages/admin/AdminCredits';
 import AdminCosts from './pages/admin/AdminCosts';
 import AdminLabels from './pages/admin/AdminLabels';
 import AdminReports from './pages/admin/AdminReports';
+import AdminNewsletterAnalytics from './pages/admin/AdminNewsletterAnalytics';
 
 export default function App() {
   return (
@@ -34,6 +35,7 @@ export default function App() {
               <Route path="costs" element={<AdminCosts />} />
               <Route path="labels" element={<AdminLabels />} />
               <Route path="reports" element={<AdminReports />} />
+              <Route path="analytics/nieuwsbrief" element={<AdminNewsletterAnalytics />} />
             </Route>
           </Routes>
         </AuthProvider>

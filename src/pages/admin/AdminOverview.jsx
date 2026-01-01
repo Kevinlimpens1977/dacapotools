@@ -191,8 +191,8 @@ export default function AdminOverview() {
                                 key={index}
                                 to={alert.link}
                                 className={`flex items-center gap-3 p-3 rounded-lg transition-colors ${alert.type === 'warning'
-                                        ? 'bg-amber-500/10 hover:bg-amber-500/20'
-                                        : 'bg-blue-500/10 hover:bg-blue-500/20'
+                                    ? 'bg-amber-500/10 hover:bg-amber-500/20'
+                                    : 'bg-blue-500/10 hover:bg-blue-500/20'
                                     }`}
                             >
                                 <span className={`material-symbols-outlined ${alert.type === 'warning' ? 'text-amber-500' : 'text-blue-500'

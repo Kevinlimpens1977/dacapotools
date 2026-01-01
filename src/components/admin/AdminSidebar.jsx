@@ -44,6 +44,11 @@ const menuItems = [
         label: 'Rapportages',
         path: '/admin/reports',
         icon: 'description'
+    },
+    {
+        label: 'Nieuwsbrief Analytics',
+        path: '/admin/analytics/nieuwsbrief',
+        icon: 'mail'
     }
 ];
 

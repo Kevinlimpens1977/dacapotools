@@ -5,7 +5,7 @@
  * Shows page title and theme toggle.
  */
 
-import { useLocation } from 'react-router-dom';
+import { useLocation, Link } from 'react-router-dom';
 import { useTheme } from '../../context/ThemeContext';
 
 // Map paths to page titles
@@ -43,9 +43,18 @@ export default function AdminHeader() {
         <header className="sticky top-0 z-40 bg-card/95 backdrop-blur-md border-b border-theme">
             <div className="flex items-center justify-between px-6 py-3">
                 {/* Left: Title */}
-                <div>
-                    <h1 className="text-lg font-bold">{getPageTitle()}</h1>
-                    <p className="text-xs text-secondary">Admin Dashboard</p>
+                <div className="flex items-center gap-4">
+                    <Link
+                        to="/"
+                        className="flex items-center justify-center size-10 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                        title="Terug naar App"
+                    >
+                        <span className="material-symbols-outlined">arrow_back</span>
+                    </Link>
+                    <div>
+                        <h1 className="text-lg font-bold">{getPageTitle()}</h1>
+                        <p className="text-xs text-secondary">Admin Dashboard</p>
+                    </div>
                 </div>
 
                 {/* Right: Actions */}

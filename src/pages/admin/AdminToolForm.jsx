@@ -384,50 +384,59 @@ export default function AdminToolForm() {
                             </div>
                         </div>
 
-                        {/* URL/Route Configuration */}
+                        {/* Unified URL/Route Configuration */}
                         <div className="bg-card rounded-xl border border-theme p-5 space-y-4">
                             <h3 className="font-semibold">
-                                {isExternal ? 'Externe URL *' : 'Interne Route *'}
+                                Link / Pad
                             </h3>
 
-                            {isExternal ? (
-                                <div>
-                                    <label className="block text-sm font-medium mb-2">
-                                        Externe URL
-                                        <span className="text-red-500 ml-1">*</span>
-                                    </label>
-                                    <input
-                                        type="url"
-                                        value={formData.externalUrl}
-                                        onChange={(e) => setFormData(prev => ({ ...prev, externalUrl: e.target.value }))}
-                                        className="w-full h-12 px-4 rounded-lg border border-theme bg-gray-50 dark:bg-gray-800"
-                                        placeholder="https://example.com"
-                                        required={isExternal}
-                                    />
-                                    <p className="text-xs text-secondary mt-2">
-                                        <span className="material-symbols-outlined text-sm align-middle mr-1">open_in_new</span>
-                                        Deze link opent in een nieuw tabblad
-                                    </p>
-                                </div>
-                            ) : (
-                                <div>
-                                    <label className="block text-sm font-medium mb-2">
-                                        Interne Route
-                                        <span className="text-red-500 ml-1">*</span>
-                                    </label>
-                                    <input
-                                        type="text"
-                                        value={formData.internalRoute}
-                                        onChange={(e) => setFormData(prev => ({ ...prev, internalRoute: e.target.value }))}
-                                        className="w-full h-12 px-4 rounded-lg border border-theme bg-gray-50 dark:bg-gray-800"
-                                        placeholder="/app/toolnaam"
-                                        required={!isExternal}
-                                    />
-                                    <p className="text-xs text-secondary mt-2">
-                                        Route binnen DaCapoTools (bijv. /app/paco)
-                                    </p>
-                                </div>
-                            )}
+                            <div>
+                                <label className="block text-sm font-medium mb-2">
+                                    {isExternal ? 'Web URL' : 'Interne Route'}
+                                    <span className="text-red-500 ml-1">*</span>
+                                </label>
+                                <input
+                                    type="text"
+                                    value={isExternal ? formData.externalUrl : formData.internalRoute}
+                                    onChange={(e) => {
+                                        const val = e.target.value;
+                                        const isUrl = /^https?:\/\//i.test(val);
+
+                                        setFormData(prev => {
+                                            let newLabels = prev.labels;
+
+                                            // Auto-detect URL and add 'extern' label if not present
+                                            if (isUrl && !prev.labels.includes('extern')) {
+                                                const primary = getPrimaryLabel(prev.labels);
+                                                newLabels = primary ? [primary, 'extern'] : ['extern'];
+                                            }
+
+                                            // Determine which field to update based on the (potentially new) external state
+                                            const willBeExternal = newLabels.includes('extern');
+
+                                            return {
+                                                ...prev,
+                                                labels: newLabels,
+                                                externalUrl: willBeExternal ? val : '',
+                                                internalRoute: willBeExternal ? '' : val
+                                            };
+                                        });
+                                    }}
+                                    className="w-full h-12 px-4 rounded-lg border border-theme bg-gray-50 dark:bg-gray-800"
+                                    placeholder={isExternal ? "https://example.com" : "/app/toolnaam"}
+                                    required
+                                />
+                                <p className="text-xs text-secondary mt-2">
+                                    {isExternal ? (
+                                        <>
+                                            <span className="material-symbols-outlined text-sm align-middle mr-1">open_in_new</span>
+                                            Deze link opent in een nieuw tabblad (automatisch gedetecteerd)
+                                        </>
+                                    ) : (
+                                        "Route binnen DaCapoTools (bijv. /app/paco). Plak een https:// link om automatisch naar Extern te wisselen."
+                                    )}
+                                </p>
+                            </div>
                         </div>
 
                         {/* Image */}
