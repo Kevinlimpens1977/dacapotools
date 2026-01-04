@@ -7,28 +7,19 @@
  */
 
 import { useState, useEffect } from 'react';
-import { collection, getDocs, doc, updateDoc, getDoc, setDoc } from 'firebase/firestore';
+import { collection, getDocs, doc, updateDoc, deleteField } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { useAuth } from '../../context/AuthContext';
-import { ROLES } from '../../config/roles';
-
-// Newsletter Generator role constants
-const NEWSLETTER_ROLES = {
-    NONE: 'none',
-    EDITOR: 'editor',
-    ADMIN: 'admin'
-};
+import { ROLES } from '../../config/roles'; // Keeping this for reference, though logic is simplified
+import EditUserModal from '../../components/EditUserModal';
 
 export default function AdminUsers() {
     const { isSupervisor, user: currentUser } = useAuth();
     const [users, setUsers] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [editingRole, setEditingRole] = useState(null);
-    const [savingRole, setSavingRole] = useState(false);
-    const [editingNewsletterRole, setEditingNewsletterRole] = useState(null);
-    const [savingNewsletterRole, setSavingNewsletterRole] = useState(false);
+    const [editingUser, setEditingUser] = useState(null);
 
-    // Fetch all users with their Newsletter Generator roles
+    // Fetch all users
     useEffect(() => {
         const fetchUsers = async () => {
             try {
@@ -36,25 +27,18 @@ export default function AdminUsers() {
                 const usersRef = collection(db, 'users');
                 const snapshot = await getDocs(usersRef);
 
-                const usersData = await Promise.all(snapshot.docs.map(async (userDoc) => {
-                    const userData = {
+                const usersData = snapshot.docs.map(userDoc => {
+                    const data = userDoc.data();
+                    return {
                         id: userDoc.id,
-                        ...userDoc.data()
+                        ...data,
+                        // Normalize data structure for UI
+                        ...data,
+                        // Normalize data structure for UI
+                        newsletterRole: data.appRoles?.nieuwsbriefgenerator || 'none',
+                        gastenRole: data.appRoles?.gastenregistratie || 'none'
                     };
-
-                    // Fetch Newsletter Generator app role
-                    try {
-                        const newsletterRoleDoc = await getDoc(doc(db, 'users', userDoc.id, 'apps', 'nieuwsbrief'));
-                        userData.newsletterRole = newsletterRoleDoc.exists()
-                            ? (newsletterRoleDoc.data().role || NEWSLETTER_ROLES.NONE)
-                            : NEWSLETTER_ROLES.NONE;
-                    } catch (error) {
-                        console.error('Error fetching newsletter role for user:', userDoc.id, error);
-                        userData.newsletterRole = NEWSLETTER_ROLES.NONE;
-                    }
-
-                    return userData;
-                }));
+                });
 
                 // Sort by email
                 usersData.sort((a, b) => (a.email || '').localeCompare(b.email || ''));
@@ -69,63 +53,69 @@ export default function AdminUsers() {
         fetchUsers();
     }, []);
 
-    // Update user role
-    const handleRoleChange = async (userId, newRole) => {
+    const handleSaveUser = async (updatesPayload) => {
+        if (!editingUser) return;
+
         try {
-            setSavingRole(true);
-            const userRef = doc(db, 'users', userId);
-            await updateDoc(userRef, { role: newRole });
+            const userRef = doc(db, 'users', editingUser.id);
+            const firestoreUpdates = {};
+            const appRolesUpdates = updatesPayload.appRoles || {};
 
-            // Update local state
-            setUsers(prev => prev.map(u =>
-                u.id === userId ? { ...u, role: newRole } : u
-            ));
+            // Handle Nieuwsbrief Generator Role
+            if (appRolesUpdates.nieuwsbriefgenerator) {
+                firestoreUpdates['appRoles.nieuwsbriefgenerator'] = appRolesUpdates.nieuwsbriefgenerator;
+            } else if (appRolesUpdates.nieuwsbriefgenerator === undefined) {
+                // If explicitly undefined/removed
+                firestoreUpdates['appRoles.nieuwsbriefgenerator'] = deleteField();
+            }
 
-            setEditingRole(null);
+            // Handle Gastenregistratie Role
+            if (appRolesUpdates.gastenregistratie) {
+                firestoreUpdates['appRoles.gastenregistratie'] = appRolesUpdates.gastenregistratie;
+            } else if (appRolesUpdates.gastenregistratie === undefined) {
+                // If explicitly undefined/removed
+                firestoreUpdates['appRoles.gastenregistratie'] = deleteField();
+            }
+
+            // If we have updates, apply them
+            if (Object.keys(firestoreUpdates).length > 0) {
+                await updateDoc(userRef, firestoreUpdates);
+
+                // Update local state
+                setUsers(prev => prev.map(u => {
+                    if (u.id === editingUser.id) {
+                        const newNewsletterRole = appRolesUpdates.nieuwsbriefgenerator || 'none';
+                        const newGastenRole = appRolesUpdates.gastenregistratie || 'none';
+                        return {
+                            ...u,
+                            // Update the flattened UI prop
+                            newsletterRole: newNewsletterRole,
+                            gastenRole: newGastenRole,
+                            // Update the data structure for next open of modal
+                            appRoles: {
+                                ...(u.appRoles || {}),
+                                nieuwsbriefgenerator: appRolesUpdates.nieuwsbriefgenerator,
+                                gastenregistratie: appRolesUpdates.gastenregistratie
+                            }
+                        };
+                    }
+                    return u;
+                }));
+            }
+
+            setEditingUser(null);
         } catch (error) {
-            console.error('Error updating role:', error);
-        } finally {
-            setSavingRole(false);
-        }
-    };
-
-    // Update Newsletter Generator role
-    const handleNewsletterRoleChange = async (userId, newRole) => {
-        try {
-            setSavingNewsletterRole(true);
-            const appRoleRef = doc(db, 'users', userId, 'apps', 'nieuwsbrief');
-
-            // Set or update the role
-            await setDoc(appRoleRef, {
-                role: newRole,
-                updatedAt: new Date(),
-                updatedBy: currentUser.uid
-            }, { merge: true });
-
-            // Update local state
-            setUsers(prev => prev.map(u =>
-                u.id === userId ? { ...u, newsletterRole: newRole } : u
-            ));
-
-            setEditingNewsletterRole(null);
-        } catch (error) {
-            console.error('Error updating newsletter role:', error);
-        } finally {
-            setSavingNewsletterRole(false);
+            console.error('Error updating user roles:', error);
+            alert('Er is een fout opgetreden bij het opslaan van de rollen.');
         }
     };
 
     const getRoleBadge = (role) => {
         switch (role) {
-            case ROLES.SUPERVISOR:
+            case 'supervisor':
                 return {
                     label: 'Supervisor',
                     class: 'bg-purple-500/10 text-purple-600 dark:text-purple-400'
-                };
-            case ROLES.ADMIN:
-                return {
-                    label: 'Admin',
-                    class: 'bg-blue-500/10 text-blue-600 dark:text-blue-400'
                 };
             default:
                 return {
@@ -137,19 +127,29 @@ export default function AdminUsers() {
 
     const getNewsletterRoleBadge = (role) => {
         switch (role) {
-            case NEWSLETTER_ROLES.ADMIN:
+            case 'administrator':
                 return {
                     label: 'Admin',
                     class: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
                 };
-            case NEWSLETTER_ROLES.EDITOR:
+            default:
                 return {
-                    label: 'Editor',
-                    class: 'bg-cyan-500/10 text-cyan-600 dark:text-cyan-400'
+                    label: 'Gebruiker',
+                    class: 'bg-gray-500/10 text-gray-600 dark:text-gray-400'
+                };
+        }
+    };
+
+    const getGastenRoleBadge = (role) => {
+        switch (role) {
+            case 'administrator':
+                return {
+                    label: 'Admin',
+                    class: 'bg-orange-500/10 text-orange-600 dark:text-orange-400'
                 };
             default:
                 return {
-                    label: 'Geen',
+                    label: 'Gebruiker',
                     class: 'bg-gray-500/10 text-gray-600 dark:text-gray-400'
                 };
         }
@@ -158,9 +158,9 @@ export default function AdminUsers() {
     if (loading) {
         return (
             <div className="flex items-center justify-center py-12">
-                <span className="material-symbols-outlined text-4xl animate-spin text-[#2860E0]">
+                <div className="material-symbols-outlined text-4xl animate-spin text-[#2860E0]">
                     sync
-                </span>
+                </div>
             </div>
         );
     }
@@ -176,7 +176,7 @@ export default function AdminUsers() {
             </div>
 
             {/* Stats */}
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="bg-card rounded-xl border border-theme p-5">
                     <div className="flex items-center gap-3">
                         <div className="size-12 rounded-lg bg-blue-500/10 flex items-center justify-center">
@@ -195,28 +195,22 @@ export default function AdminUsers() {
                         </div>
                         <div>
                             <p className="text-2xl font-bold">
-                                {users.filter(u => u.role === ROLES.SUPERVISOR || u.role === ROLES.ADMIN).length}
+                                {users.filter(u => u.role === 'supervisor').length}
                             </p>
-                            <p className="text-sm text-secondary">Beheerders</p>
+                            <p className="text-sm text-secondary">Supervisors</p>
                         </div>
                     </div>
                 </div>
                 <div className="bg-card rounded-xl border border-theme p-5">
                     <div className="flex items-center gap-3">
-                        <div className="size-12 rounded-lg bg-green-500/10 flex items-center justify-center">
-                            <span className="material-symbols-outlined text-green-500">schedule</span>
+                        <div className="size-12 rounded-lg bg-emerald-500/10 flex items-center justify-center">
+                            <span className="material-symbols-outlined text-emerald-500">admin_panel_settings</span>
                         </div>
                         <div>
                             <p className="text-2xl font-bold">
-                                {users.filter(u => {
-                                    if (!u.lastLogin) return false;
-                                    const lastLogin = u.lastLogin.toDate?.() || new Date(u.lastLogin);
-                                    const weekAgo = new Date();
-                                    weekAgo.setDate(weekAgo.getDate() - 7);
-                                    return lastLogin > weekAgo;
-                                }).length}
+                                {users.filter(u => u.newsletterRole === 'administrator').length}
                             </p>
-                            <p className="text-sm text-secondary">Actief (7 dagen)</p>
+                            <p className="text-sm text-secondary">App Admins</p>
                         </div>
                     </div>
                 </div>
@@ -230,6 +224,7 @@ export default function AdminUsers() {
                             <th className="text-left px-4 py-3 font-semibold">Gebruiker</th>
                             <th className="text-left px-4 py-3 font-semibold">Rol</th>
                             <th className="text-left px-4 py-3 font-semibold">Nieuwsbrief Generator</th>
+                            <th className="text-left px-4 py-3 font-semibold">Gastenregistratie</th>
                             <th className="text-left px-4 py-3 font-semibold">Laatste Login</th>
                             <th className="text-left px-4 py-3 font-semibold">Aangemaakt</th>
                             {isSupervisor && (
@@ -248,6 +243,8 @@ export default function AdminUsers() {
                         ) : (
                             users.map((user) => {
                                 const roleBadge = getRoleBadge(user.role);
+                                const newsletterBadge = getNewsletterRoleBadge(user.newsletterRole);
+                                const gastenBadge = getGastenRoleBadge(user.gastenRole);
                                 const isCurrentUser = user.id === currentUser?.uid;
 
                                 return (
@@ -269,40 +266,19 @@ export default function AdminUsers() {
                                             </div>
                                         </td>
                                         <td className="px-4 py-3">
-                                            {editingRole === user.id ? (
-                                                <select
-                                                    value={user.role || ROLES.USER}
-                                                    onChange={(e) => handleRoleChange(user.id, e.target.value)}
-                                                    disabled={savingRole}
-                                                    className="px-3 py-1.5 rounded-lg border border-theme bg-white dark:bg-gray-800 text-sm"
-                                                >
-                                                    <option value={ROLES.USER}>Gebruiker</option>
-                                                    <option value={ROLES.ADMIN}>Admin</option>
-                                                    <option value={ROLES.SUPERVISOR}>Supervisor</option>
-                                                </select>
-                                            ) : (
-                                                <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${roleBadge.class}`}>
-                                                    {roleBadge.label}
-                                                </span>
-                                            )}
+                                            <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${roleBadge.class}`}>
+                                                {roleBadge.label}
+                                            </span>
                                         </td>
                                         <td className="px-4 py-3">
-                                            {isSupervisor && editingNewsletterRole === user.id ? (
-                                                <select
-                                                    value={user.newsletterRole || NEWSLETTER_ROLES.NONE}
-                                                    onChange={(e) => handleNewsletterRoleChange(user.id, e.target.value)}
-                                                    disabled={savingNewsletterRole}
-                                                    className="px-3 py-1.5 rounded-lg border border-theme bg-white dark:bg-gray-800 text-sm"
-                                                >
-                                                    <option value={NEWSLETTER_ROLES.NONE}>Geen</option>
-                                                    <option value={NEWSLETTER_ROLES.EDITOR}>Editor</option>
-                                                    <option value={NEWSLETTER_ROLES.ADMIN}>Admin</option>
-                                                </select>
-                                            ) : (
-                                                <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${getNewsletterRoleBadge(user.newsletterRole).class}`}>
-                                                    {getNewsletterRoleBadge(user.newsletterRole).label}
-                                                </span>
-                                            )}
+                                            <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${newsletterBadge.class}`}>
+                                                {newsletterBadge.label}
+                                            </span>
+                                        </td>
+                                        <td className="px-4 py-3">
+                                            <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${gastenBadge.class}`}>
+                                                {gastenBadge.label}
+                                            </span>
                                         </td>
                                         <td className="px-4 py-3 text-secondary text-sm">
                                             {user.lastLogin
@@ -326,37 +302,14 @@ export default function AdminUsers() {
                                         </td>
                                         {isSupervisor && (
                                             <td className="px-4 py-3">
-                                                <div className="flex items-center justify-end gap-1">
-                                                    {editingRole === user.id || editingNewsletterRole === user.id ? (
-                                                        <button
-                                                            onClick={() => {
-                                                                setEditingRole(null);
-                                                                setEditingNewsletterRole(null);
-                                                            }}
-                                                            className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-                                                            title="Annuleren"
-                                                        >
-                                                            <span className="material-symbols-outlined">close</span>
-                                                        </button>
-                                                    ) : (
-                                                        <>
-                                                            <button
-                                                                onClick={() => setEditingRole(user.id)}
-                                                                className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-                                                                title="Rol wijzigen"
-                                                                disabled={isCurrentUser}
-                                                            >
-                                                                <span className="material-symbols-outlined">edit</span>
-                                                            </button>
-                                                            <button
-                                                                onClick={() => setEditingNewsletterRole(user.id)}
-                                                                className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-                                                                title="Nieuwsbrief rol wijzigen"
-                                                            >
-                                                                <span className="material-symbols-outlined">mail</span>
-                                                            </button>
-                                                        </>
-                                                    )}
+                                                <div className="flex items-center justify-end">
+                                                    <button
+                                                        onClick={() => setEditingUser(user)}
+                                                        className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-gray-500 hover:text-gray-900 dark:hover:text-gray-100"
+                                                        title="Bewerken"
+                                                    >
+                                                        <span className="material-symbols-outlined">edit</span>
+                                                    </button>
                                                 </div>
                                             </td>
                                         )}
@@ -376,6 +329,15 @@ export default function AdminUsers() {
                         Als admin heb je alleen-lezen toegang. Neem contact op met een supervisor voor het wijzigen van gebruikersrollen.
                     </p>
                 </div>
+            )}
+
+            {/* Edit Modal */}
+            {editingUser && (
+                <EditUserModal
+                    user={editingUser}
+                    onClose={() => setEditingUser(null)}
+                    onSave={handleSaveUser}
+                />
             )}
         </div>
     );

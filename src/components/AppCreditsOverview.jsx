@@ -6,11 +6,12 @@
  * Supervisors can edit credits and limits.
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
+import { collection, getDocs } from 'firebase/firestore';
+import { db } from '../firebase';
 import { useAuth } from '../context/AuthContext';
-import { getAllUsersCredits, modifyCredits } from '../services/CreditService';
+import { subscribeToAllAppCredits, modifyCredits } from '../services/CreditService';
 import { getAppConfig, getAllAppIds } from '../config/appCredits';
-import { ROLES } from '../config/roles';
 
 /**
  * Overview of all users' credits for admin/supervisor
@@ -18,9 +19,10 @@ import { ROLES } from '../config/roles';
  * @param {string} props.appId - App ID to show (optional, shows selector if not provided)
  */
 export default function AppCreditsOverview({ appId: initialAppId }) {
-    const { userRole, isSupervisor } = useAuth();
+    const { isSupervisor } = useAuth();
     const [selectedAppId, setSelectedAppId] = useState(initialAppId || getAllAppIds()[0]);
-    const [usersCredits, setUsersCredits] = useState([]);
+    const [allCredits, setAllCredits] = useState([]); // Raw credit data from subscription
+    const [users, setUsers] = useState({}); // Map of uid -> userData
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [editingUser, setEditingUser] = useState(null);
@@ -30,26 +32,47 @@ export default function AppCreditsOverview({ appId: initialAppId }) {
     const appConfig = getAppConfig(selectedAppId);
     const allAppIds = getAllAppIds();
 
-    // Fetch users credits
+    // Fetch users (names/emails) - One time fetch
     useEffect(() => {
-        const fetchData = async () => {
+        const fetchUsers = async () => {
             try {
-                setLoading(true);
-                setError(null);
-                const data = await getAllUsersCredits(selectedAppId);
-                setUsersCredits(data);
+                const usersRef = collection(db, 'users');
+                const snap = await getDocs(usersRef);
+                const userMap = {};
+                snap.forEach(doc => {
+                    userMap[doc.id] = doc.data();
+                });
+                setUsers(userMap);
             } catch (err) {
-                console.error('[AppCreditsOverview] Error:', err);
-                setError(err.message);
-            } finally {
-                setLoading(false);
+                console.error('Error fetching users:', err);
             }
         };
+        fetchUsers();
+    }, []);
 
-        if (selectedAppId) {
-            fetchData();
-        }
-    }, [selectedAppId]);
+    // Subscribe to credits - Real-time
+    useEffect(() => {
+        setLoading(true);
+        const unsubscribe = subscribeToAllAppCredits((data) => {
+            setAllCredits(data);
+            setLoading(false);
+        });
+
+        return () => unsubscribe();
+    }, []);
+
+    // Combine data and filter by selected App
+    const filteredCredits = useMemo(() => {
+        // Filter credits for the selected app
+        const appCredits = allCredits.filter(c => c.appId === selectedAppId);
+
+        // Merge with user data
+        return appCredits.map(c => ({
+            ...c,
+            email: users[c.uid]?.email || 'Onbekend',
+            displayName: users[c.uid]?.displayName || 'Onbekend',
+        })).sort((a, b) => (a.email || '').localeCompare(b.email || ''));
+    }, [allCredits, users, selectedAppId]);
 
     // Start editing a user's credits
     const handleStartEdit = (userCredit) => {
@@ -71,14 +94,7 @@ export default function AppCreditsOverview({ appId: initialAppId }) {
         try {
             setSaving(true);
             await modifyCredits(uid, selectedAppId, editForm);
-
-            // Update local state
-            setUsersCredits(prev => prev.map(uc =>
-                uc.uid === uid
-                    ? { ...uc, ...editForm }
-                    : uc
-            ));
-
+            // Local state update handled by subscription!
             setEditingUser(null);
         } catch (err) {
             console.error('[AppCreditsOverview] Save error:', err);
@@ -89,8 +105,8 @@ export default function AppCreditsOverview({ appId: initialAppId }) {
     };
 
     // Calculate totals
-    const totalCreditsUsed = usersCredits.reduce((sum, uc) => sum + (uc.totalUsedThisMonth || 0), 0);
-    const totalCreditsRemaining = usersCredits.reduce((sum, uc) => sum + (uc.creditsRemaining || 0), 0);
+    const totalCreditsUsed = filteredCredits.reduce((sum, uc) => sum + (uc.totalUsedThisMonth || 0), 0);
+    const totalCreditsRemaining = filteredCredits.reduce((sum, uc) => sum + (uc.creditsRemaining || 0), 0);
 
     return (
         <div className="space-y-4">
@@ -119,7 +135,7 @@ export default function AppCreditsOverview({ appId: initialAppId }) {
             <div className="grid grid-cols-3 gap-4">
                 <div className="bg-card rounded-lg border border-theme p-4">
                     <p className="text-secondary text-sm">Gebruikers</p>
-                    <p className="text-2xl font-bold mt-1">{usersCredits.length}</p>
+                    <p className="text-2xl font-bold mt-1">{filteredCredits.length}</p>
                 </div>
                 <div className="bg-card rounded-lg border border-theme p-4">
                     <p className="text-secondary text-sm">Totaal Gebruikt</p>
@@ -155,20 +171,20 @@ export default function AppCreditsOverview({ appId: initialAppId }) {
                         </tr>
                     </thead>
                     <tbody>
-                        {loading ? (
+                        {loading && filteredCredits.length === 0 ? (
                             <tr>
                                 <td colSpan={isSupervisor ? 5 : 4} className="px-4 py-8 text-center">
                                     <span className="material-symbols-outlined animate-spin text-2xl">sync</span>
                                 </td>
                             </tr>
-                        ) : usersCredits.length === 0 ? (
+                        ) : filteredCredits.length === 0 ? (
                             <tr>
                                 <td colSpan={isSupervisor ? 5 : 4} className="px-4 py-8 text-center text-secondary">
-                                    Geen gebruikers met credits voor deze app
+                                    Geen gebruikers met credits gevonden voor deze app
                                 </td>
                             </tr>
                         ) : (
-                            usersCredits.map((uc) => (
+                            filteredCredits.map((uc) => (
                                 <tr key={uc.uid} className="border-b border-theme last:border-0 hover:bg-gray-500/5">
                                     <td className="px-4 py-3">
                                         <div>

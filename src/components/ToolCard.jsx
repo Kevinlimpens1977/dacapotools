@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { useTools } from '../hooks/useTools';
 import { getPrimaryLabelInfo, isExternalTool } from '../config/toolLabels';
 
-export default function ToolCard({ tool }) {
+export default function ToolCard({ tool, onSelect }) {
     const navigate = useNavigate();
     const { user, isFavorite, toggleFavorite } = useAuth();
     const { updateFavoriteCount, trackToolClick } = useTools();
@@ -24,6 +24,7 @@ export default function ToolCard({ tool }) {
                 const textHeight = descriptionRef.current.scrollHeight;
                 const containerHeight = containerRef.current.clientHeight;
                 const overflow = textHeight - containerHeight;
+                console.log('ToolCard Scroll Check:', { name: tool.name, textHeight, containerHeight, overflow });
                 setScrollDistance(Math.max(0, overflow));
             }
         };
@@ -55,20 +56,13 @@ export default function ToolCard({ tool }) {
         const userId = user?.uid || 'anonymous';
         await trackToolClick(tool.id, userId);
 
-        if (isExternal) {
-            // Open external tool in new tab
-            const url = tool.externalUrl || tool.url; // Support both new and legacy field
-            if (url) {
-                window.open(url, '_blank', 'noopener,noreferrer');
-            }
-        } else {
-            // Navigate to internal route
-            const route = tool.internalRoute || tool.url || `/app/${tool.id}`; // Fallback to ID-based route
-            navigate(route);
+        // Notify parent to open drawer
+        if (onSelect) {
+            onSelect(tool);
         }
     };
 
-    const descriptionText = tool.shortDescription || tool.description || 'Geen beschrijving beschikbaar';
+    const descriptionText = tool.description || tool.shortDescription || 'Geen beschrijving beschikbaar';
 
     return (
         <div
@@ -78,7 +72,7 @@ export default function ToolCard({ tool }) {
             onClick={handleToolClick}
         >
             {/* Tool Image - Fixed aspect ratio with object-fit cover */}
-            <div className="w-full aspect-[16/9] relative overflow-hidden bg-gray-100 dark:bg-gray-700">
+            <div className="w-full aspect-[16/9] relative overflow-hidden bg-[var(--bg-surface-hover)]">
                 {tool.imageUrl ? (
                     <img
                         src={tool.imageUrl}
@@ -87,7 +81,7 @@ export default function ToolCard({ tool }) {
                     />
                 ) : (
                     <div className="w-full h-full flex items-center justify-center">
-                        <span className="material-symbols-outlined text-5xl text-gray-400">apps</span>
+                        <span className="material-symbols-outlined text-5xl text-muted">apps</span>
                     </div>
                 )}
 
@@ -102,9 +96,9 @@ export default function ToolCard({ tool }) {
                 {user && (
                     <button
                         onClick={handleFavoriteClick}
-                        className={`absolute top-2 right-2 p-2 rounded-full bg-white/90 dark:bg-gray-800/90 shadow-sm transition-all ${favorite
+                        className={`absolute top-2 right-2 p-2 rounded-full bg-[var(--bg-surface)] shadow-sm transition-all ${favorite
                             ? 'text-red-500'
-                            : 'text-gray-400 hover:text-red-500'
+                            : 'text-muted hover:text-red-500'
                             }`}
                         aria-label={favorite ? 'Verwijder uit favorieten' : 'Voeg toe aan favorieten'}
                     >
@@ -121,24 +115,21 @@ export default function ToolCard({ tool }) {
             {/* Card Content */}
             <div className="p-4 flex flex-col flex-1">
                 {/* Title */}
-                <h3 className="font-semibold text-base mb-1 line-clamp-1 group-hover:text-[#2860E0] transition-colors">
+                <h3 className="font-semibold text-base mb-1 line-clamp-1 group-hover:text-primary transition-colors text-primary">
                     {tool.name}
                 </h3>
 
                 {/* Description with hover scroll */}
                 <div
                     ref={containerRef}
-                    className="h-[3.75rem] overflow-hidden mb-4 flex-1"
-                    style={{ maxHeight: '3.75rem' }} // Fixed height for 3 lines
+                    className="h-[3.75rem] overflow-hidden mb-4"
                 >
                     <p
                         ref={descriptionRef}
-                        className="text-sm text-secondary transition-transform ease-linear"
+                        className="text-sm text-secondary transition-transform ease-linear will-change-transform group-hover:translate-y-[var(--scroll-offset)]"
                         style={{
-                            transform: isHovering && scrollDistance > 0
-                                ? `translateY(-${scrollDistance}px)`
-                                : 'translateY(0)',
-                            transitionDuration: isHovering ? `${Math.max(2, scrollDistance * 30)}ms` : '300ms'
+                            '--scroll-offset': `-${scrollDistance}px`,
+                            transitionDuration: `${Math.max(2, scrollDistance * 30)}ms`
                         }}
                     >
                         {descriptionText}
@@ -161,6 +152,7 @@ export default function ToolCard({ tool }) {
                     )}
 
                     <span className={`material-symbols-outlined text-[#2860E0] transform transition-transform duration-300 ${isHovering ? 'translate-x-1' : ''}`}>
+                        {/* Icon now indicates interaction (drawer) - can keep arrow as "Go/More" */}
                         {isExternal ? 'open_in_new' : 'arrow_forward'}
                     </span>
                 </div>

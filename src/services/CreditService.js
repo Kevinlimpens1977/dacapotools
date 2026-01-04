@@ -8,7 +8,7 @@
  * NOT on clicking/opening tools.
  */
 
-import { doc, getDoc, setDoc, updateDoc, collection, getDocs, Timestamp } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc, collection, getDocs, Timestamp, collectionGroup, onSnapshot } from 'firebase/firestore';
 import { db } from '../firebase';
 import { getAppConfig, getDefaultCreditsData } from '../config/appCredits';
 
@@ -179,6 +179,36 @@ export async function modifyCredits(uid, appId, updates) {
 
     const updatedSnap = await getDoc(creditsRef);
     return updatedSnap.data();
+}
+
+/**
+ * Subscribe to ALL users' credits for ALL apps (real-time)
+ * Returns a list of standardized credit objects with 'uid' and 'appId' injected
+ */
+export function subscribeToAllAppCredits(callback) {
+    const appsQuery = collectionGroup(db, 'apps');
+
+    return onSnapshot(appsQuery, (snapshot) => {
+        const results = [];
+        snapshot.forEach((doc) => {
+            // Document ID is the appId (e.g. 'paco', 'translate')
+            const appId = doc.id;
+            // Parent is 'apps' collection, Parent's Parent is 'users' doc
+            const userDoc = doc.ref.parent.parent;
+
+            if (userDoc) {
+                results.push({
+                    uid: userDoc.id,
+                    appId: appId,
+                    ...doc.data()
+                });
+            }
+        });
+        callback(results);
+    }, (error) => {
+        console.error('Error in subscribeToAllAppCredits:', error);
+        callback([]);
+    });
 }
 
 /**

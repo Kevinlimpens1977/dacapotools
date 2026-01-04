@@ -37,11 +37,11 @@ export default function ToolCardPreview({ tool }) {
                 <div className="flex items-center gap-3 flex-1 min-w-0">
                     {/* Tool Image */}
                     <div
-                        className="size-10 rounded-md bg-cover bg-center shrink-0 border border-theme bg-gray-100 dark:bg-gray-700 flex items-center justify-center relative"
+                        className="size-10 rounded-md bg-cover bg-center shrink-0 border border-theme bg-[var(--bg-surface-hover)] flex items-center justify-center relative"
                         style={imageUrl ? { backgroundImage: `url('${imageUrl}')` } : {}}
                     >
                         {!imageUrl && (
-                            <span className="material-symbols-outlined text-gray-400">apps</span>
+                            <span className="material-symbols-outlined text-muted">apps</span>
                         )}
                         {/* External indicator */}
                         {isExternal && (
@@ -85,7 +85,7 @@ export default function ToolCardPreview({ tool }) {
 
                 {/* Favorite Button (visual only) */}
                 <button
-                    className="shrink-0 p-1 rounded-full text-secondary hover:text-red-500 hover:bg-gray-500/10 transition-colors"
+                    className="shrink-0 p-1 rounded-full text-secondary hover:text-red-500 hover:bg-[var(--bg-surface-hover)] transition-colors"
                     onClick={(e) => e.preventDefault()}
                 >
                     <span className="material-symbols-outlined text-xl">favorite</span>

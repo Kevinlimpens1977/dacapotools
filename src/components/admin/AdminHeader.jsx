@@ -46,7 +46,7 @@ export default function AdminHeader() {
                 <div className="flex items-center gap-4">
                     <Link
                         to="/"
-                        className="flex items-center justify-center size-10 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                        className="flex items-center justify-center size-10 rounded-full hover:bg-[var(--bg-surface-hover)] transition-colors"
                         title="Terug naar App"
                     >
                         <span className="material-symbols-outlined">arrow_back</span>
@@ -62,7 +62,7 @@ export default function AdminHeader() {
                     {/* Theme Toggle */}
                     <button
                         onClick={toggleTheme}
-                        className="flex items-center justify-center size-10 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                        className="flex items-center justify-center size-10 rounded-full hover:bg-[var(--bg-surface-hover)] transition-colors"
                         aria-label={isDarkMode ? 'Schakel naar light mode' : 'Schakel naar dark mode'}
                     >
                         <span className="material-symbols-outlined">

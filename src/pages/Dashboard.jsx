@@ -3,10 +3,9 @@ import { useAuth } from '../context/AuthContext';
 import { useTools } from '../hooks/useTools';
 import { useLabels } from '../hooks/useLabels';
 import Header from '../components/Header';
-import SearchBar from '../components/SearchBar';
-import LabelFilter from '../components/LabelFilter';
 import ToolCard from '../components/ToolCard';
 import FavoritesTray from '../components/FavoritesTray';
+import ToolDetailDrawer from '../components/ToolDetailDrawer';
 
 export default function Dashboard() {
     const { user, userData } = useAuth();
@@ -15,11 +14,10 @@ export default function Dashboard() {
 
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedLabels, setSelectedLabels] = useState([]);
-    const [showSearch, setShowSearch] = useState(false);
+    const [selectedTool, setSelectedTool] = useState(null);
 
     const handleToggleLabel = (labelId) => {
         if (labelId === null) {
-            // "All" selected - clear filters
             setSelectedLabels([]);
         } else {
             setSelectedLabels(prev =>
@@ -31,13 +29,11 @@ export default function Dashboard() {
     };
 
     const filteredTools = useMemo(() => {
-        // First filter to only published tools (or tools without status for backwards compatibility)
         const publishedTools = activeTools.filter(tool =>
             tool.status === 'published' || !tool.status
         );
 
         return publishedTools.filter(tool => {
-            // Search filter
             if (searchQuery) {
                 const query = searchQuery.toLowerCase();
                 const matchesName = tool.name?.toLowerCase().includes(query);
@@ -46,7 +42,6 @@ export default function Dashboard() {
                 if (!matchesName && !matchesDesc && !matchesShortDesc) return false;
             }
 
-            // Label filter
             if (selectedLabels.length > 0) {
                 const hasMatchingLabel = tool.labels?.some(label =>
                     selectedLabels.includes(label)
@@ -62,56 +57,33 @@ export default function Dashboard() {
 
     return (
         <div className="min-h-screen flex flex-col">
-            <Header onSearchClick={() => setShowSearch(prev => !prev)} />
+            <Header
+                labels={labels}
+                selectedLabels={selectedLabels}
+                onToggleLabel={handleToggleLabel}
+                searchQuery={searchQuery}
+                onSearchChange={setSearchQuery}
+            />
 
             <main className="flex-1 w-full pb-8">
-                {/* Search Bar (toggled) */}
-                {showSearch && (
-                    <div className="px-4 pt-4">
-                        <SearchBar
-                            value={searchQuery}
-                            onChange={setSearchQuery}
-                            placeholder="Zoek op naam of beschrijving..."
-                        />
-                    </div>
-                )}
-
                 {/* Favorites Section (only when logged in) */}
                 {user && userData?.favorites?.length > 0 && (
-                    <FavoritesTray tools={activeTools} />
+                    <FavoritesTray
+                        tools={activeTools}
+                        onSelect={setSelectedTool}
+                    />
                 )}
 
                 {/* All Tools Section */}
                 <section className="mt-4">
                     <div className="px-4 mb-3 flex justify-between items-center">
                         <h2 className="text-xl font-bold tracking-tight">Alle Tools</h2>
-                        <div className="flex gap-2">
-                            <button className="flex items-center justify-center size-9 rounded-full bg-card border border-theme hover:bg-gray-500/10 transition-colors">
-                                <span className="material-symbols-outlined text-xl">sort</span>
-                            </button>
-                            <button
-                                onClick={() => setShowSearch(prev => !prev)}
-                                className={`flex items-center justify-center size-9 rounded-full border transition-colors ${showSearch
-                                    ? 'bg-[#2860E0] text-white border-[#2860E0]'
-                                    : 'bg-card border-theme hover:bg-gray-500/10'
-                                    }`}
-                            >
-                                <span className="material-symbols-outlined text-xl">filter_alt</span>
-                            </button>
-                        </div>
+                        {/* Sort button could go here or in filter bar. 
+                            Moved to FilterBar as per plan, so keeping this clean. */}
                     </div>
 
-                    {/* Label Filters */}
-                    <div className="px-4 pb-4">
-                        <LabelFilter
-                            labels={labels}
-                            selectedLabels={selectedLabels}
-                            onToggleLabel={handleToggleLabel}
-                        />
-                    </div>
-
-                    {/* Tools Grid - Smaller tiles (30% smaller) */}
-                    <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8 gap-2 px-4 pb-24">
+                    {/* Tools Grid - Compact Layout (30% smaller) */}
+                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-7 gap-3 sm:gap-4 px-4 pb-24">
                         {isLoading ? (
                             // Loading skeleton - now as cards
                             [...Array(8)].map((_, i) => (
@@ -142,12 +114,22 @@ export default function Dashboard() {
                             </div>
                         ) : (
                             filteredTools.map(tool => (
-                                <ToolCard key={tool.id} tool={tool} />
+                                <ToolCard
+                                    key={tool.id}
+                                    tool={tool}
+                                    onSelect={setSelectedTool}
+                                />
                             ))
                         )}
                     </div>
                 </section>
             </main>
+
+            {/* Tool Detail Drawer */}
+            <ToolDetailDrawer
+                tool={selectedTool}
+                onClose={() => setSelectedTool(null)}
+            />
         </div>
     );
 }

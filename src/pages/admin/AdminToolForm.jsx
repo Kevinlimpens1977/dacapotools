@@ -33,7 +33,7 @@ export default function AdminToolForm() {
     const navigate = useNavigate();
     const { isSupervisor } = useAuth();
     const { addTool, updateTool } = useTools();
-    const { uploadToolImage } = useImageUpload();
+    const { uploadToolImage, uploadImage } = useImageUpload();
 
     const isEditing = Boolean(id);
 
@@ -42,6 +42,7 @@ export default function AdminToolForm() {
         description: '',
         shortDescription: '',
         labels: [],
+        url: '',
         externalUrl: '',
         internalRoute: '',
         imageUrl: '',
@@ -97,7 +98,8 @@ export default function AdminToolForm() {
                             description: data.description || '',
                             shortDescription: data.shortDescription || '',
                             labels: data.labels || [],
-                            externalUrl: data.externalUrl || data.url || '',
+                            url: data.url || data.externalUrl || '',
+                            externalUrl: data.url || data.externalUrl || '',
                             internalRoute: data.internalRoute || '',
                             imageUrl: data.imageUrl || '',
                             status: data.status || 'draft',
@@ -124,22 +126,7 @@ export default function AdminToolForm() {
         });
     };
 
-    // Handle extern toggle
-    const handleExternToggle = () => {
-        setFormData(prev => {
-            const primaryLabel = getPrimaryLabel(prev.labels);
-            if (!primaryLabel) return prev; // Can't toggle without primary
 
-            const hasExtern = prev.labels.includes('extern');
-            if (hasExtern) {
-                // Remove extern
-                return { ...prev, labels: [primaryLabel] };
-            } else {
-                // Add extern
-                return { ...prev, labels: [primaryLabel, 'extern'] };
-            }
-        });
-    };
 
     // Handle form submission
     const handleSubmit = async (e) => {
@@ -159,17 +146,10 @@ export default function AdminToolForm() {
             return;
         }
 
-        // Validate URL based on external status
-        if (isExternal) {
-            if (!formData.externalUrl.trim()) {
-                setError('Externe URL is verplicht voor externe tools');
-                return;
-            }
-        } else {
-            if (!formData.internalRoute.trim()) {
-                setError('Interne route is verplicht voor native tools');
-                return;
-            }
+        // Validate URL
+        if (!formData.url && !formData.externalUrl) {
+            setError('Website URL is verplicht');
+            return;
         }
 
         try {
@@ -178,8 +158,8 @@ export default function AdminToolForm() {
             // Prepare data for saving
             const saveData = {
                 ...formData,
-                // Legacy compatibility: also set url field
-                url: isExternal ? formData.externalUrl : formData.internalRoute
+                url: formData.url || formData.externalUrl, // Ensure url is set
+                internalRoute: null // Explicitly clear internalRoute
             };
 
             if (isEditing) {
@@ -213,13 +193,14 @@ export default function AdminToolForm() {
     // Handle cropped image
     const handleCroppedImage = async (croppedFile) => {
         try {
-            const url = await uploadToolImage(croppedFile, formData.name || 'tool');
+            // Use generic uploadImage to ensure unique filename and rules compliance
+            const url = await uploadImage(croppedFile, 'tool-images');
             setFormData(prev => ({ ...prev, imageUrl: url }));
             setShowCropper(false);
             setCropImage(null);
         } catch (err) {
             console.error('Error uploading image:', err);
-            setError('Fout bij uploaden afbeelding');
+            setError('Fout bij uploaden afbeelding: ' + (err.message || 'Onbekende fout'));
         }
     };
 
@@ -318,6 +299,15 @@ export default function AdminToolForm() {
                                     className="w-full h-32 px-4 py-3 rounded-lg border border-theme bg-gray-50 dark:bg-gray-800 resize-none"
                                     placeholder="Uitgebreide beschrijving..."
                                 />
+                                <div className="text-xs text-secondary space-y-1">
+                                    <p className="font-medium">Opmaak ondersteuning:</p>
+                                    <ul className="list-disc list-inside space-y-0.5 opacity-80">
+                                        <li><code className="bg-gray-100 dark:bg-gray-700 px-1 rounded">- lijsten</code> (gebruik liggend streepje)</li>
+                                        <li><code className="bg-gray-100 dark:bg-gray-700 px-1 rounded">**vetgedrukt**</code></li>
+                                        <li><code className="bg-gray-100 dark:bg-gray-700 px-1 rounded">*cursief*</code></li>
+                                        <li><code className="bg-gray-100 dark:bg-gray-700 px-1 rounded">### Koptekst</code></li>
+                                    </ul>
+                                </div>
                             </div>
                         </div>
 
@@ -353,88 +343,39 @@ export default function AdminToolForm() {
                                 )}
                             </div>
 
-                            {/* Extern Toggle */}
-                            <div className="pt-4 border-t border-theme">
-                                <label className="flex items-center gap-3 cursor-pointer">
-                                    <button
-                                        type="button"
-                                        onClick={handleExternToggle}
-                                        disabled={!selectedPrimaryLabel}
-                                        className={`relative inline-flex h-6 w-11 shrink-0 rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#2860E0] ${isExternal ? 'bg-red-500' : 'bg-gray-200 dark:bg-gray-700'
-                                            } ${!selectedPrimaryLabel ? 'opacity-50 cursor-not-allowed' : ''}`}
-                                    >
-                                        <span
-                                            className={`inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${isExternal ? 'translate-x-5' : 'translate-x-0'
-                                                }`}
-                                        />
-                                    </button>
-                                    <div className="flex items-center gap-2">
-                                        <span
-                                            className="size-8 rounded-lg flex items-center justify-center text-white"
-                                            style={{ backgroundColor: EXTERN_LABEL.color }}
-                                        >
-                                            <span className="material-symbols-outlined text-lg">{EXTERN_LABEL.icon}</span>
-                                        </span>
-                                        <div>
-                                            <p className="font-medium">{EXTERN_LABEL.name}</p>
-                                            <p className="text-xs text-secondary">Opent in een nieuw tabblad</p>
-                                        </div>
-                                    </div>
-                                </label>
-                            </div>
+                            {/* Extern Toggle Removed - All tools are external/web based now */}
                         </div>
 
-                        {/* Unified URL/Route Configuration */}
+                        {/* Website URL Configuration */}
                         <div className="bg-card rounded-xl border border-theme p-5 space-y-4">
                             <h3 className="font-semibold">
-                                Link / Pad
+                                Website Link
                             </h3>
 
                             <div>
                                 <label className="block text-sm font-medium mb-2">
-                                    {isExternal ? 'Web URL' : 'Interne Route'}
+                                    Website URL
                                     <span className="text-red-500 ml-1">*</span>
                                 </label>
                                 <input
                                     type="text"
-                                    value={isExternal ? formData.externalUrl : formData.internalRoute}
+                                    value={formData.url || formData.externalUrl || ''}
                                     onChange={(e) => {
                                         const val = e.target.value;
-                                        const isUrl = /^https?:\/\//i.test(val);
-
-                                        setFormData(prev => {
-                                            let newLabels = prev.labels;
-
-                                            // Auto-detect URL and add 'extern' label if not present
-                                            if (isUrl && !prev.labels.includes('extern')) {
-                                                const primary = getPrimaryLabel(prev.labels);
-                                                newLabels = primary ? [primary, 'extern'] : ['extern'];
-                                            }
-
-                                            // Determine which field to update based on the (potentially new) external state
-                                            const willBeExternal = newLabels.includes('extern');
-
-                                            return {
-                                                ...prev,
-                                                labels: newLabels,
-                                                externalUrl: willBeExternal ? val : '',
-                                                internalRoute: willBeExternal ? '' : val
-                                            };
-                                        });
+                                        setFormData(prev => ({
+                                            ...prev,
+                                            url: val,
+                                            externalUrl: val, // Keep in sync for now
+                                            internalRoute: '' // Clear legacy
+                                        }));
                                     }}
                                     className="w-full h-12 px-4 rounded-lg border border-theme bg-gray-50 dark:bg-gray-800"
-                                    placeholder={isExternal ? "https://example.com" : "/app/toolnaam"}
+                                    placeholder="https://example.com"
                                     required
                                 />
                                 <p className="text-xs text-secondary mt-2">
-                                    {isExternal ? (
-                                        <>
-                                            <span className="material-symbols-outlined text-sm align-middle mr-1">open_in_new</span>
-                                            Deze link opent in een nieuw tabblad (automatisch gedetecteerd)
-                                        </>
-                                    ) : (
-                                        "Route binnen DaCapoTools (bijv. /app/paco). Plak een https:// link om automatisch naar Extern te wisselen."
-                                    )}
+                                    <span className="material-symbols-outlined text-sm align-middle mr-1">open_in_new</span>
+                                    Link opent altijd in een nieuw tabblad.
                                 </p>
                             </div>
                         </div>

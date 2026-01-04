@@ -1,172 +1,299 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 
 /**
- * ImageCropper - Fixed aspect ratio crop frame for tool images
- * Allows admin to drag image behind a fixed frame to select visible area
- * Aspect ratio matches the tool tile image display (16:9)
+ * ImageCropper - Pan and Zoom image behind a fixed aspect ratio frame
+ * 
+ * Features:
+ * - Fixed 16:9 crop frame centered in the view
+ * - Image retains aspect ratio and can be panned (dragged) and zoomed
+ * - Output is always 1280x720 (HD 16:9)
  */
-export default function ImageCropper({ imageUrl, onCrop, onCancel, aspectRatio = 16 / 9 }) {
+export default function ImageCropper({ imageUrl, onCrop, onCancel }) {
     const containerRef = useRef(null);
     const imageRef = useRef(null);
+
+    // State
+    const [scale, setScale] = useState(1);
     const [position, setPosition] = useState({ x: 0, y: 0 });
     const [isDragging, setIsDragging] = useState(false);
     const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
-    const [imageSize, setImageSize] = useState({ width: 0, height: 0 });
-    const [scale, setScale] = useState(1);
+    const [processing, setProcessing] = useState(false);
 
-    // Frame dimensions (fixed) - 30% smaller than original
-    const frameWidth = 224;
-    const frameHeight = frameWidth / aspectRatio;
+    // Limits / Configuration
+    const TARGET_WIDTH = 1280;
+    const TARGET_HEIGHT = 720;
+    const MIN_SCALE = 0.5;
+    const MAX_SCALE = 3;
 
-    // Handle image load to calculate initial positioning
-    const handleImageLoad = useCallback((e) => {
+    // Visual crop frame size (in CSS pixels) - displayed to user
+    // We'll calculate this dynamically or fix it to a reasonable size
+    const [viewportSize] = useState({ width: 480, height: 270 });
+
+    // Initialize: Load image and center it with "cover" style initially
+    const handleImageLoad = (e) => {
         const img = e.target;
         const naturalWidth = img.naturalWidth;
         const naturalHeight = img.naturalHeight;
 
-        // Calculate scale to fit image so it covers the frame
-        const scaleX = frameWidth / naturalWidth;
-        const scaleY = frameHeight / naturalHeight;
-        const newScale = Math.max(scaleX, scaleY);
+        // Calculate Center Offset
+        // We want the center of the image to be at the center of the container.
+        if (containerRef.current) {
+            const container = containerRef.current.getBoundingClientRect();
 
-        setScale(newScale);
-        setImageSize({ width: naturalWidth, height: naturalHeight });
+            // Let's calculate an initial scale that fits the image within the container nicely (contain)
+            // but allow zooming out/in.
 
-        // Center the image
-        const scaledWidth = naturalWidth * newScale;
-        const scaledHeight = naturalHeight * newScale;
-        setPosition({
-            x: (frameWidth - scaledWidth) / 2,
-            y: (frameHeight - scaledHeight) / 2
-        });
-    }, [frameWidth, frameHeight]);
+            // Actually, let's start with a scale that ensures the crop frame is filled if possible (cover logic for the frame)
+            const coverScale = Math.max(
+                viewportSize.width / naturalWidth,
+                viewportSize.height / naturalHeight
+            );
 
-    // Mouse/touch handlers for dragging
+            // Ensure it covers at least the frame, but don't blow it up too huge if image is massive
+            const initialScale = coverScale;
+
+            setScale(initialScale);
+
+            setPosition({
+                x: (container.width - naturalWidth * initialScale) / 2,
+                y: (container.height - naturalHeight * initialScale) / 2
+            });
+        }
+    };
+
+    // Drag Logic
     const handleMouseDown = (e) => {
         e.preventDefault();
         setIsDragging(true);
-        setDragStart({
-            x: e.clientX - position.x,
-            y: e.clientY - position.y
-        });
+        setDragStart({ x: e.clientX - position.x, y: e.clientY - position.y });
     };
 
-    const handleMouseMove = useCallback((e) => {
+    const handleMouseMove = (e) => {
         if (!isDragging) return;
-
-        const scaledWidth = imageSize.width * scale;
-        const scaledHeight = imageSize.height * scale;
-
-        // Calculate bounds
-        const minX = Math.min(0, frameWidth - scaledWidth);
-        const maxX = Math.max(0, frameWidth - scaledWidth);
-        const minY = Math.min(0, frameHeight - scaledHeight);
-        const maxY = Math.max(0, frameHeight - scaledHeight);
-
-        const newX = Math.max(minX, Math.min(maxX, e.clientX - dragStart.x));
-        const newY = Math.max(minY, Math.min(maxY, e.clientY - dragStart.y));
-
-        setPosition({ x: newX, y: newY });
-    }, [isDragging, dragStart, imageSize, scale, frameWidth, frameHeight]);
+        setPosition({
+            x: e.clientX - dragStart.x,
+            y: e.clientY - dragStart.y
+        });
+    };
 
     const handleMouseUp = () => {
         setIsDragging(false);
     };
 
-    // Crop the image using canvas
+    const handleWheel = (e) => {
+        e.preventDefault();
+        const delta = e.deltaY * -0.001;
+        const newScale = Math.min(Math.max(MIN_SCALE, scale + delta), MAX_SCALE);
+
+        // Enhance: Zoom towards mouse center would be better, but simple center zoom is ok for now.
+        // Or if we just scale, it zooms relative to top-left (0,0) of the image's untransformed space effectively?
+        // No, transform origin is top-left.
+        // To fix jumpiness on zoom, we normally adjust position too.
+        // For this iteration, simple scale. User can drag to correct.
+        setScale(newScale);
+    };
+
+    // Crop Logic
     const handleCrop = async () => {
-        if (!imageRef.current) return;
+        if (!imageRef.current || !containerRef.current || processing) return;
 
-        const canvas = document.createElement('canvas');
-        canvas.width = frameWidth;
-        canvas.height = frameHeight;
-        const ctx = canvas.getContext('2d');
+        try {
+            setProcessing(true);
+            const canvas = document.createElement('canvas');
+            canvas.width = TARGET_WIDTH;
+            canvas.height = TARGET_HEIGHT;
+            const ctx = canvas.getContext('2d');
 
-        // Calculate source coordinates (in original image pixels)
-        const sourceX = -position.x / scale;
-        const sourceY = -position.y / scale;
-        const sourceWidth = frameWidth / scale;
-        const sourceHeight = frameHeight / scale;
+            // 1. Get exact visual positions from the DOM
+            // This bypasses any confusion about transforms, scale origins, or CSS math.
+            const imageRect = imageRef.current.getBoundingClientRect();
+            const containerRect = containerRef.current.getBoundingClientRect();
 
-        // Draw cropped area
-        ctx.drawImage(
-            imageRef.current,
-            sourceX, sourceY, sourceWidth, sourceHeight,
-            0, 0, frameWidth, frameHeight
-        );
+            // 2. Calculate where the "Hole" is on the screen
+            // The hole is centered in the container with viewportSize dimensions
+            const holeRect = {
+                left: containerRect.left + (containerRect.width - viewportSize.width) / 2,
+                top: containerRect.top + (containerRect.height - viewportSize.height) / 2,
+                width: viewportSize.width,
+                height: viewportSize.height
+            };
 
-        // Convert to blob
-        canvas.toBlob(async (blob) => {
+            // 3. Calculate ratio between "Natural Image" and "On-Screen Image"
+            // If image is natural 1000px but shown as 500px, ratio is 2 (1 screen pixel = 2 image pixels)
+            const naturalWidth = imageRef.current.naturalWidth;
+            const naturalHeight = imageRef.current.naturalHeight;
+            const ratioX = naturalWidth / imageRect.width;
+            const ratioY = naturalHeight / imageRect.height;
+
+            // 4. Calculate coordinates relative to the Image
+            // (Hole Left - Image Left) * Ratio
+            const cropX = (holeRect.left - imageRect.left) * ratioX;
+            const cropY = (holeRect.top - imageRect.top) * ratioY;
+            const cropWidth = holeRect.width * ratioX;
+            const cropHeight = holeRect.height * ratioY;
+
+            // Draw to canvas
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Use the calculated source coordinates
+            ctx.drawImage(
+                imageRef.current,
+                cropX, cropY, cropWidth, cropHeight, // Source (from original image)
+                0, 0, TARGET_WIDTH, TARGET_HEIGHT    // Destination (canvas)
+            );
+
+            // Convert to blob properly wrapped in promise
+            const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.92));
+
             if (blob) {
-                // Create a File from the blob for upload
-                const file = new File([blob], 'cropped-image.png', { type: 'image/png' });
-                onCrop(file);
+                // Use a generic valid filename (timestamp will be added by upload logic)
+                const file = new File([blob], "tool_header.jpg", { type: "image/jpeg" });
+                await onCrop(file); // Await parent upload logic
             }
-        }, 'image/png', 0.9);
+        } catch (error) {
+            console.error("Crop/Save error:", error);
+        } finally {
+            setProcessing(false);
+        }
     };
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
-            <div className="bg-card rounded-xl border border-theme p-6 max-w-lg w-full">
-                <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
-                    <span className="material-symbols-outlined">crop</span>
-                    Afbeelding Positioneren
-                </h3>
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/90 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+            <div className="flex flex-col w-full max-w-4xl h-[80vh] bg-neutral-900 rounded-2xl overflow-hidden shadow-2xl border border-white/10">
 
-                <p className="text-sm text-secondary mb-4">
-                    Sleep de afbeelding om het zichtbare gedeelte te kiezen.
-                </p>
+                {/* Header */}
+                <div className="flex items-center justify-between px-6 py-4 bg-neutral-800 border-b border-white/5 z-20">
+                    <div>
+                        <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                            <span className="material-symbols-outlined">crop_free</span>
+                            Afbeelding Bijsnijden
+                        </h3>
+                        <p className="text-secondary text-xs">
+                            Sleep en zoom om de ideale uitsnede te maken.
+                        </p>
+                    </div>
+                    <button onClick={onCancel} className="text-gray-400 hover:text-white transition-colors">
+                        <span className="material-symbols-outlined">close</span>
+                    </button>
+                </div>
 
-                {/* Crop Area */}
+                {/* Workspace */}
                 <div
                     ref={containerRef}
-                    className="relative mx-auto overflow-hidden rounded-lg border-2 border-dashed border-[#2860E0] bg-gray-100 dark:bg-gray-800"
-                    style={{ width: frameWidth, height: frameHeight }}
+                    className="flex-1 relative overflow-hidden cursor-move bg-[#0a0a0a] touch-none"
+                    onMouseDown={handleMouseDown}
                     onMouseMove={handleMouseMove}
                     onMouseUp={handleMouseUp}
                     onMouseLeave={handleMouseUp}
+                    onWheel={handleWheel}
                 >
+                    {/* Render Image Layer */}
                     <img
                         ref={imageRef}
                         src={imageUrl}
-                        alt="Crop preview"
-                        className="absolute cursor-move select-none"
+                        alt="Target"
+                        className="absolute max-w-none pointer-events-none select-none will-change-transform"
                         style={{
                             transform: `translate(${position.x}px, ${position.y}px) scale(${scale})`,
-                            transformOrigin: 'top left',
-                            maxWidth: 'none'
+                            transformOrigin: 'top left'
                         }}
                         onLoad={handleImageLoad}
-                        onMouseDown={handleMouseDown}
-                        draggable={false}
-                        crossOrigin="anonymous"
                     />
 
-                    {/* Corner indicators */}
-                    <div className="absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 border-[#2860E0] pointer-events-none" />
-                    <div className="absolute top-0 right-0 w-4 h-4 border-t-2 border-r-2 border-[#2860E0] pointer-events-none" />
-                    <div className="absolute bottom-0 left-0 w-4 h-4 border-b-2 border-l-2 border-[#2860E0] pointer-events-none" />
-                    <div className="absolute bottom-0 right-0 w-4 h-4 border-b-2 border-r-2 border-[#2860E0] pointer-events-none" />
+                    {/* Overlay Layer (The Mask) */}
+                    <div className="absolute inset-0 pointer-events-none flex items-center justify-center z-10">
+                        <div
+                            style={{
+                                width: viewportSize.width,
+                                height: viewportSize.height,
+                                boxShadow: '0 0 0 9999px rgba(0, 0, 0, 0.7)' // Huge shadow to dim outside
+                            }}
+                            className="border-2 border-white/80 shadow-2xl relative box-content"
+                        >
+                            {/* Grid of Thirds */}
+                            <div className="absolute inset-0 grid grid-cols-3 grid-rows-3 opacity-20">
+                                <div className="border-r border-b border-white"></div>
+                                <div className="border-r border-b border-white"></div>
+                                <div className="border-b border-white"></div>
+                                <div className="border-r border-b border-white"></div>
+                                <div className="border-r border-b border-white"></div>
+                                <div className="border-b border-white"></div>
+                                <div className="border-r border-white"></div>
+                                <div className="border-r border-white"></div>
+                                <div></div>
+                            </div>
+
+                            {/* Dimensions Label */}
+                            <div className="absolute -bottom-8 left-0 right-0 text-center text-white/50 text-xs font-mono">
+                                16:9 Output
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Controls Overlay */}
+                    <div className="absolute bottom-6 left-1/2 -translate-x-1/2 bg-neutral-800/90 backdrop-blur border border-white/10 rounded-full px-4 py-2 flex items-center gap-4 z-20 shadow-lg">
+                        <button
+                            className="p-1 text-white hover:text-blue-400 transition-colors"
+                            onClick={() => setScale(s => Math.max(MIN_SCALE, s - 0.1))}
+                            title="Uitzoomen"
+                        >
+                            <span className="material-symbols-outlined text-lg">remove</span>
+                        </button>
+
+                        <div className="w-24 h-1 bg-white/20 rounded-full overflow-hidden">
+                            <div
+                                className="h-full bg-blue-500 transition-all"
+                                style={{ width: `${((scale - MIN_SCALE) / (MAX_SCALE - MIN_SCALE)) * 100}%` }}
+                            />
+                        </div>
+
+                        <button
+                            className="p-1 text-white hover:text-blue-400 transition-colors"
+                            onClick={() => setScale(s => Math.min(MAX_SCALE, s + 0.1))}
+                            title="Inzoomen"
+                        >
+                            <span className="material-symbols-outlined text-lg">add</span>
+                        </button>
+
+                        <span className="text-xs font-mono text-white/70 w-8 text-right">
+                            {Math.round(scale * 100)}%
+                        </span>
+                    </div>
+
                 </div>
 
-                <p className="text-xs text-secondary text-center mt-2">
-                    16:9 formaat • {frameWidth} × {Math.round(frameHeight)} pixels
-                </p>
-
-                {/* Actions */}
-                <div className="flex gap-3 mt-6">
+                {/* Footer buttons */}
+                <div className="p-4 bg-neutral-800 border-t border-white/5 flex justify-end gap-3 z-20">
                     <button
                         onClick={onCancel}
-                        className="flex-1 py-3 px-4 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 font-medium rounded-lg transition-colors"
+                        disabled={processing}
+                        className="px-6 py-2 rounded-lg border border-white/10 text-white hover:bg-white/5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                         Annuleren
                     </button>
                     <button
                         onClick={handleCrop}
-                        className="flex-1 py-3 px-4 bg-[#2860E0] hover:bg-[#1C4DAB] text-white font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
+                        disabled={processing}
+                        className={`
+                            px-6 py-2 rounded-lg font-medium shadow-lg transition-all flex items-center gap-2
+                            ${processing
+                                ? 'bg-[#2860E0]/50 text-white/70 cursor-wait'
+                                : 'bg-[#2860E0] hover:bg-[#1C4DAB] text-white shadow-blue-500/20'
+                            }
+                        `}
                     >
-                        <span className="material-symbols-outlined text-lg">check</span>
-                        Toepassen
+                        {processing ? (
+                            <>
+                                <span className="material-symbols-outlined animate-spin text-lg">sync</span>
+                                Opslaan...
+                            </>
+                        ) : (
+                            <>
+                                <span className="material-symbols-outlined text-lg">crop</span>
+                                Opslaan
+                            </>
+                        )}
                     </button>
                 </div>
             </div>

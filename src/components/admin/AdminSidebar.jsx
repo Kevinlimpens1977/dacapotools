@@ -98,8 +98,8 @@ export default function AdminSidebar() {
                         className={({ isActive }) => `
                             flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors
                             ${isActive
-                                ? 'bg-[#2860E0] text-white'
-                                : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
+                                ? 'bg-primary text-white'
+                                : 'text-primary hover:bg-[var(--bg-surface-hover)]'
                             }
                         `}
                     >

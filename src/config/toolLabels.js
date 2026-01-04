@@ -20,7 +20,7 @@ export const PRIMARY_LABELS = [
     { id: 'leerlingbegeleiding', name: 'Leerlingbegeleiding', icon: 'support', color: '#A855F7' },
     { id: 'administratie', name: 'Administratie', icon: 'folder', color: '#F97316' },
     { id: 'planning', name: 'Planning', icon: 'calendar_month', color: '#14B8A6' },
-    { id: 'communicatie', name: 'Communicatie', icon: 'chat', color: '#EC4899' },
+    { id: 'communicatie', name: 'PR en communicatie', icon: 'chat', color: '#EC4899' },
     { id: 'ai-automatisering', name: 'AI & Automatisering', icon: 'smart_toy', color: '#6366F1' },
     { id: 'overig', name: 'Overig', icon: 'more_horiz', color: '#6B7280' }
 ];

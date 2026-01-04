@@ -91,7 +91,10 @@ export default function AdminOverview() {
         <div className="space-y-6 max-w-7xl">
             {/* Welcome Message */}
             <div>
-                <h2 className="text-2xl font-bold">Welkom terug! 👋</h2>
+                <h2 className="text-2xl font-bold flex items-center gap-2">
+                    Welkom terug!
+                    <span className="material-symbols-outlined text-[#2860E0]">waving_hand</span>
+                </h2>
                 <p className="text-secondary mt-1">
                     Hier is het overzicht van je DaCapo Tools platform.
                 </p>
@@ -212,8 +215,8 @@ export default function AdminOverview() {
             {/* Charts Placeholder */}
             <div className="grid md:grid-cols-2 gap-6">
                 <div className="bg-card rounded-xl border border-theme p-5">
-                    <h3 className="font-semibold mb-4">Gebruik per Tool</h3>
-                    <div className="h-48 flex items-center justify-center bg-gray-100 dark:bg-gray-800 rounded-lg">
+                    <h3 className="font-semibold mb-4 text-primary">Gebruik per Tool</h3>
+                    <div className="h-48 flex items-center justify-center bg-[var(--bg-app)] rounded-lg">
                         <div className="text-center text-secondary">
                             <span className="material-symbols-outlined text-4xl mb-2 block">bar_chart</span>
                             <p className="text-sm">Grafiek komt binnenkort</p>
@@ -222,8 +225,8 @@ export default function AdminOverview() {
                 </div>
 
                 <div className="bg-card rounded-xl border border-theme p-5">
-                    <h3 className="font-semibold mb-4">Credits Overzicht</h3>
-                    <div className="h-48 flex items-center justify-center bg-gray-100 dark:bg-gray-800 rounded-lg">
+                    <h3 className="font-semibold mb-4 text-primary">Credits Overzicht</h3>
+                    <div className="h-48 flex items-center justify-center bg-[var(--bg-app)] rounded-lg">
                         <div className="text-center text-secondary">
                             <span className="material-symbols-outlined text-4xl mb-2 block">pie_chart</span>
                             <p className="text-sm">Grafiek komt binnenkort</p>

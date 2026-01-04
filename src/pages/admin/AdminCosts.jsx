@@ -10,6 +10,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { collection, getDocs } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { useAuth } from '../../context/AuthContext';
+import { subscribeToAllAppCredits } from '../../services/CreditService';
 import { APP_CREDITS_CONFIG, getAllAppIds } from '../../config/appCredits';
 
 // Default cost per credit (can be configured)
@@ -20,55 +21,47 @@ const DEFAULT_COST_PER_CREDIT = {
 
 export default function AdminCosts() {
     const { isSupervisor } = useAuth();
-    const [usersCredits, setUsersCredits] = useState([]);
+    const [allCredits, setAllCredits] = useState([]); // Raw credits from subscription
+    const [users, setUsers] = useState({}); // Map of uid -> userData
     const [loading, setLoading] = useState(true);
 
     const allAppIds = getAllAppIds();
 
-    // Fetch all users and their credit usage
+    // Fetch users (names/emails) - One time fetch
     useEffect(() => {
-        const fetchData = async () => {
+        const fetchUsers = async () => {
             try {
-                setLoading(true);
                 const usersRef = collection(db, 'users');
-                const usersSnap = await getDocs(usersRef);
-
-                const result = [];
-
-                for (const userDoc of usersSnap.docs) {
-                    const userData = userDoc.data();
-                    const userCredits = { uid: userDoc.id, email: userData.email, displayName: userData.displayName, apps: {} };
-
-                    // Fetch apps subcollection
-                    const appsRef = collection(db, 'users', userDoc.id, 'apps');
-                    const appsSnap = await getDocs(appsRef);
-
-                    appsSnap.forEach(appDoc => {
-                        userCredits.apps[appDoc.id] = appDoc.data();
-                    });
-
-                    if (Object.keys(userCredits.apps).length > 0) {
-                        result.push(userCredits);
-                    }
-                }
-
-                setUsersCredits(result);
-            } catch (error) {
-                console.error('Error fetching costs data:', error);
-            } finally {
-                setLoading(false);
+                const snap = await getDocs(usersRef);
+                const userMap = {};
+                snap.forEach(doc => {
+                    userMap[doc.id] = doc.data();
+                });
+                setUsers(userMap);
+            } catch (err) {
+                console.error('Error fetching users:', err);
             }
         };
+        fetchUsers();
+    }, []);
 
-        fetchData();
+    // Subscribe to credits - Real-time
+    useEffect(() => {
+        setLoading(true);
+        const unsubscribe = subscribeToAllAppCredits((data) => {
+            setAllCredits(data);
+            setLoading(false);
+        });
+
+        return () => unsubscribe();
     }, []);
 
     // Calculate costs
     const costSummary = useMemo(() => {
         const summary = {
             totalCost: 0,
-            costPerApp: {},
-            costPerUser: []
+            costPerApp: {}, // appId -> { used: number, cost: number }
+            costPerUser: [] // List of user objects with costs
         };
 
         // Initialize per-app costs
@@ -76,27 +69,50 @@ export default function AdminCosts() {
             summary.costPerApp[appId] = { used: 0, cost: 0 };
         });
 
-        usersCredits.forEach(userCredit => {
-            let userTotalCost = 0;
+        // Group credits by user
+        const creditsByUser = {};
+        allCredits.forEach(credit => {
+            if (!creditsByUser[credit.uid]) {
+                creditsByUser[credit.uid] = {};
+            }
+            creditsByUser[credit.uid][credit.appId] = credit;
+        });
 
-            Object.entries(userCredit.apps).forEach(([appId, appData]) => {
-                const used = appData.totalUsedThisMonth || 0;
+        // Calculate per user costs
+        Object.keys(creditsByUser).forEach(uid => {
+            const userApps = creditsByUser[uid];
+            let userTotalCost = 0;
+            const userData = users[uid] || {};
+
+            const userCostEntry = {
+                uid,
+                email: userData.email || 'Onbekend',
+                displayName: userData.displayName || 'Onbekend',
+                apps: {},
+                totalCost: 0
+            };
+
+            Object.entries(userApps).forEach(([appId, creditData]) => {
+                const used = creditData.totalUsedThisMonth || 0;
                 const costPerCredit = DEFAULT_COST_PER_CREDIT[appId] || 0.01;
                 const cost = used * costPerCredit;
 
+                // Update app summary
                 if (summary.costPerApp[appId]) {
                     summary.costPerApp[appId].used += used;
                     summary.costPerApp[appId].cost += cost;
                 }
 
+                // Update user entry
+                userCostEntry.apps[appId] = {
+                    totalUsedThisMonth: used,
+                    cost
+                };
                 userTotalCost += cost;
             });
 
-            summary.costPerUser.push({
-                ...userCredit,
-                totalCost: userTotalCost
-            });
-
+            userCostEntry.totalCost = userTotalCost;
+            summary.costPerUser.push(userCostEntry);
             summary.totalCost += userTotalCost;
         });
 
@@ -104,7 +120,7 @@ export default function AdminCosts() {
         summary.costPerUser.sort((a, b) => b.totalCost - a.totalCost);
 
         return summary;
-    }, [usersCredits, allAppIds]);
+    }, [allCredits, users, allAppIds]);
 
     if (loading) {
         return (
@@ -133,7 +149,7 @@ export default function AdminCosts() {
                     €{costSummary.totalCost.toFixed(2)}
                 </p>
                 <p className="text-white/70 text-sm mt-2">
-                    Gebaseerd op {usersCredits.length} actieve gebruikers
+                    Gebaseerd op {costSummary.costPerUser.length} actieve gebruikers
                 </p>
             </div>
 
@@ -249,7 +265,7 @@ export default function AdminCosts() {
                                     {allAppIds.map(appId => {
                                         const appData = userCost.apps[appId];
                                         const used = appData?.totalUsedThisMonth || 0;
-                                        const cost = used * (DEFAULT_COST_PER_CREDIT[appId] || 0.01);
+                                        const cost = appData?.cost || 0;
 
                                         return (
                                             <td key={appId} className="px-4 py-3 text-center text-secondary">
@@ -268,6 +284,7 @@ export default function AdminCosts() {
             </div>
 
             {/* Chart Placeholder */}
+            {/* Same chart placeholder */}
             <div className="bg-card rounded-xl border border-theme p-5">
                 <h3 className="font-semibold mb-4">Maandelijkse Trend</h3>
                 <div className="h-48 flex items-center justify-center bg-gray-100 dark:bg-gray-800 rounded-lg">
