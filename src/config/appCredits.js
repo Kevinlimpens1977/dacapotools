@@ -12,6 +12,7 @@ export const APP_CREDITS_CONFIG = {
     'paco': {
         appId: 'paco',
         appName: 'Paco Generator',
+        hasCredits: true,
         monthlyLimit: 50,
         creditUnit: 'afbeelding',
         creditUnitPlural: 'afbeeldingen',
@@ -20,10 +21,23 @@ export const APP_CREDITS_CONFIG = {
     'translate': {
         appId: 'translate',
         appName: 'Vertaler',
+        hasCredits: true,
         monthlyLimit: 1000,
         creditUnit: 'woord',
         creditUnitPlural: 'woorden',
         description: 'Vertaal teksten naar andere talen'
+    },
+    'nieuwsbrief': {
+        appId: 'nieuwsbrief',
+        appName: 'Nieuwsbrief Generator',
+        hasCredits: false,
+        description: 'Beheer en genereer nieuwsbrieven'
+    },
+    'gastenregistratie': {
+        appId: 'gastenregistratie',
+        appName: 'Gastenregistratie',
+        hasCredits: false,
+        description: 'Registreer gasten en bezoekers'
     }
 };
 

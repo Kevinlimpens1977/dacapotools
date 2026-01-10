@@ -1,32 +1,30 @@
-# Firestore Security Rules for Per-App Credits
+# Firestore Security Rules - CANONICAL
+# DaCapo Tools v1.0
+# Status: CANON (Normatief)
 
-This document describes the recommended Firestore security rules for the per-app credit system.
+## SUPERVISOR POLICY (ABSOLUTE)
 
-## Data Structure
+- There is EXACTLY ONE supervisor
+- Supervisor role is determined EXCLUSIVELY via Firebase Custom Claims
+- Custom claim check: `request.auth.token.supervisor == true`
+- NO Firestore field may determine supervisor status
+- NO client-side role escalation is possible
 
-```
-users/{uid}
-├── role: string (optional) - "user" | "admin" | "supervisor"
-├── email: string
-├── displayName: string
-├── ... other user fields
-└── apps/
-    └── {appId}/
-        ├── creditsRemaining: number
-        ├── monthlyLimit: number
-        ├── totalUsedThisMonth: number
-        ├── lastResetAt: timestamp
-        └── createdAt: timestamp
-```
+---
 
-## Security Rules
+## CANONICAL SECURITY RULES
+
+Deploy these rules to Firebase Console > Firestore > Rules
 
 ```javascript
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
-    // Helper functions
+    // ═══════════════════════════════════════════════════════════════
+    // HELPER FUNCTIONS
+    // ═══════════════════════════════════════════════════════════════
+    
     function isAuthenticated() {
       return request.auth != null;
     }
@@ -35,129 +33,192 @@ service cloud.firestore {
       return isAuthenticated() && request.auth.uid == userId;
     }
     
-    function getUserRole(email) {
-      // Supervisor emails (hardcoded fallback)
-      let supervisorEmails = ['kevlimpens@gmail.com'];
-      let adminEmails = ['kevlimpens@gmail.com'];
-      
-      if (email in supervisorEmails) {
-        return 'supervisor';
-      } else if (email in adminEmails) {
-        return 'admin';
-      }
-      return 'user';
-    }
-    
+    // CANONICAL: Supervisor check via custom claims ONLY
     function isSupervisor() {
-      return isAuthenticated() && 
-        (getUserRole(request.auth.token.email) == 'supervisor' ||
-         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'supervisor');
+      return isAuthenticated() && request.auth.token.supervisor == true;
     }
     
-    function isAdminOrSupervisor() {
-      let role = getUserRole(request.auth.token.email);
-      let firestoreRole = get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
-      return isAuthenticated() && 
-        (role in ['admin', 'supervisor'] || firestoreRole in ['admin', 'supervisor']);
+    // Admin check: supervisor OR app-level administrator
+    function isAppAdmin(appId) {
+      return isSupervisor() || (
+        isAuthenticated() && 
+        exists(/databases/$(database)/documents/apps/$(appId)/users/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/apps/$(appId)/users/$(request.auth.uid)).data.role == 'administrator'
+      );
     }
     
-    // User documents
+    // Check if user has any admin role (for platform-level read access)
+    function hasAdminAccess() {
+      return isSupervisor(); // Only supervisor has platform-wide admin access
+    }
+    
+    // ═══════════════════════════════════════════════════════════════
+    // USERS COLLECTION (Identity Only)
+    // ═══════════════════════════════════════════════════════════════
+    
     match /users/{userId} {
       // Users can read their own document
-      // Admins and supervisors can read all user documents
-      allow read: if isOwner(userId) || isAdminOrSupervisor();
-      
-      // Users can update their own document (except role field)
-      // Only supervisors can update role field
-      allow update: if isOwner(userId) && !('role' in request.resource.data) ||
-                       isSupervisor();
+      // Supervisor can read all user documents
+      allow read: if isOwner(userId) || isSupervisor();
       
       // Users can create their own document
       allow create: if isOwner(userId);
       
-      // App credits subcollection
-      match /apps/{appId} {
-        // Users can read their own credits
-        // Admins and supervisors can read all credits
-        allow read: if isOwner(userId) || isAdminOrSupervisor();
+      // Users can update their own document
+      // FORBIDDEN: No 'role' field allowed in /users (roles are per-app)
+      allow update: if isOwner(userId) && 
+        !('role' in request.resource.data);
+      
+      // Only supervisor can delete users
+      allow delete: if isSupervisor();
+    }
+    
+    // ═══════════════════════════════════════════════════════════════
+    // APPS COLLECTION (App Registry & Per-App User Data)
+    // ═══════════════════════════════════════════════════════════════
+    
+    match /apps/{appId} {
+      // App config is readable by authenticated users
+      allow read: if isAuthenticated();
+      
+      // Only supervisor can modify app config
+      allow write: if isSupervisor();
+      
+      // Per-app user data
+      match /users/{userId} {
+        // Users can read their own app data
+        // App admins and supervisor can read all
+        allow read: if isOwner(userId) || isAppAdmin(appId);
         
-        // Users can create their own credits (initialization)
-        allow create: if isOwner(userId);
+        // CANONICAL: No client-side writes to app user data
+        // All mutations must go through Cloud Functions
+        allow create: if false;
+        allow update: if false;
+        allow delete: if false;
+      }
+      
+      // Credit Ledger - IMMUTABLE
+      match /creditLedger/{entryId} {
+        // Supervisor and app admins can read ledger
+        allow read: if isAppAdmin(appId);
         
-        // Users can update their own credits (for app logic to deduct)
-        // BUT only if creditsRemaining is being decremented or totalUsedThisMonth is incremented
-        // This prevents users from manually increasing their credits
-        allow update: if isOwner(userId) && 
-          (request.resource.data.creditsRemaining <= resource.data.creditsRemaining) ||
-          isSupervisor();
-        
-        // Only supervisors can delete credits
-        allow delete: if isSupervisor();
+        // CANONICAL: Ledger is immutable - no client writes
+        allow create: if false;
+        allow update: if false;
+        allow delete: if false;
       }
     }
     
-    // Tools collection (existing rules)
+    // ═══════════════════════════════════════════════════════════════
+    // TOOLS COLLECTION
+    // ═══════════════════════════════════════════════════════════════
+    
     match /tools/{toolId} {
+      // Tools are publicly readable
       allow read: if true;
-      allow write: if isAdminOrSupervisor();
+      
+      // Only supervisor can modify tools
+      allow write: if isSupervisor();
     }
     
-    // Labels collection (existing rules)
+    // ═══════════════════════════════════════════════════════════════
+    // LABELS COLLECTION
+    // ═══════════════════════════════════════════════════════════════
+    
     match /labels/{labelId} {
+      // Labels are publicly readable
       allow read: if true;
-      allow write: if isAdminOrSupervisor();
+      
+      // Only supervisor can modify labels
+      allow write: if isSupervisor();
     }
     
-    // Tool clicks collection (existing rules)
+    // ═══════════════════════════════════════════════════════════════
+    // TOOL CLICKS (Analytics)
+    // ═══════════════════════════════════════════════════════════════
+    
     match /toolClicks/{clickId} {
-      allow read: if isAdminOrSupervisor();
+      // Only supervisor can read analytics
+      allow read: if isSupervisor();
+      
+      // Authenticated users can create click records
       allow create: if isAuthenticated();
+      
+      // No updates or deletes
+      allow update: if false;
+      allow delete: if isSupervisor();
+    }
+    
+    // ═══════════════════════════════════════════════════════════════
+    // LEGACY: /users/{uid}/apps/{appId} (TO BE MIGRATED)
+    // Read-only access during migration period
+    // ═══════════════════════════════════════════════════════════════
+    
+    match /users/{userId}/apps/{appId} {
+      // Read-only during migration
+      allow read: if isOwner(userId) || isSupervisor();
+      
+      // No writes - all mutations via Cloud Functions
+      allow write: if false;
     }
   }
 }
 ```
 
-## Key Security Decisions
+---
 
-### 1. Role Resolution
-- Primary source: `users/{uid}.role` field in Firestore
-- Fallback: Hardcoded supervisor/admin email lists
-- Role hierarchy: supervisor > admin > user
+## KEY SECURITY DECISIONS
+
+### 1. Supervisor Resolution (CANONICAL)
+
+| Method | Status |
+|--------|--------|
+| Firebase Custom Claims (`token.supervisor == true`) | ✅ REQUIRED |
+| Firestore field (`users/{uid}.role`) | ❌ FORBIDDEN |
+| Email-based fallback | ❌ FORBIDDEN |
+| Client-side role assignment | ❌ FORBIDDEN |
 
 ### 2. Credit Write Permissions
 
-| Action | User | Admin | Supervisor |
-|--------|------|-------|------------|
+| Action | User | App Admin | Supervisor |
+|--------|------|-----------|------------|
 | Read own credits | ✅ | ✅ | ✅ |
-| Read all credits | ❌ | ✅ | ✅ |
-| Initialize own credits | ✅ | ✅ | ✅ |
-| Decrement own credits (app logic) | ✅ | ✅ | ✅ |
-| Increment own credits | ❌ | ❌ | ✅ |
-| Modify any user's credits | ❌ | ❌ | ✅ |
-| Modify monthly limits | ❌ | ❌ | ✅ |
+| Read all credits | ❌ | ✅ (own app) | ✅ |
+| Modify credits (client) | ❌ | ❌ | ❌ |
+| Modify credits (Cloud Function) | ❌ | ❌ | ✅ |
 
-### 3. Credit Deduction Security
+### 3. Ledger Immutability
 
-The rule `request.resource.data.creditsRemaining <= resource.data.creditsRemaining` ensures:
-- Users/app logic can only **decrement** credits
-- Users cannot manually increase their credits
-- Only supervisors can increase credits or modify limits
+- Credit ledger entries can NEVER be modified or deleted via client
+- Only Cloud Functions with supervisor context can create entries
+- This provides a complete audit trail
 
-### 4. Monthly Reset
+### 4. Role Assignment
 
-Monthly reset is handled by the app logic when a new month is detected:
-- App checks `lastResetAt` against current date
-- If new month, resets `creditsRemaining` to `monthlyLimit`
-- This is allowed because the reset restores to the existing limit, not exceeding it
+- Only supervisor can assign roles
+- Role assignment MUST go through Cloud Functions
+- No client-side role escalation possible
 
-> **Note**: For production, consider using Cloud Functions for credit operations to ensure complete security. Client-side rules work for the current phase but are less secure than server-side enforcement.
+---
 
-## Deployment
+## DEPLOYMENT
 
-To deploy these rules:
+```bash
+# Deploy via Firebase CLI
+firebase deploy --only firestore:rules
 
-1. Copy the rules to your Firebase Console: **Firestore Database > Rules**
-2. Or use Firebase CLI:
-   ```bash
-   firebase deploy --only firestore:rules
-   ```
+# Or copy rules to Firebase Console:
+# Firestore Database > Rules
+```
+
+---
+
+## MIGRATION NOTES
+
+The legacy structure `/users/{uid}/apps/{appId}` is set to read-only.
+All new data should be written to `/apps/{appId}/users/{uid}`.
+Migration should be completed via Cloud Functions.
+
+---
+
+**EINDE SECURITY RULES CANON**

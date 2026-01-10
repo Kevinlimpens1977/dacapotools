@@ -1,11 +1,15 @@
 /**
  * Role Definitions and Permission Mapping
  * 
- * Defines user roles and their permissions in the DaCapo Toolbox.
+ * CANONICAL IMPLEMENTATION - DaCapo Tools v1.0
+ * 
+ * Supervisor role is determined EXCLUSIVELY via Firebase Custom Claims.
+ * NO Firestore-based supervisor resolution is allowed.
  * 
  * Role Resolution:
- * 1. Primary: users/{uid}.role field in Firestore
- * 2. Fallback: Hardcoded supervisor email list
+ * 1. Supervisor: Firebase Custom Claims (request.auth.token.supervisor === true)
+ * 2. Admin: Per-app role in /apps/{appId}/users/{uid}.role === 'administrator'
+ * 3. User: Default role for all authenticated users
  */
 
 export const ROLES = {
@@ -25,23 +29,26 @@ export const PERMISSIONS = {
     ADMIN_DASHBOARD: [ROLES.ADMIN, ROLES.SUPERVISOR],
     MANAGE_TOOLS: [ROLES.ADMIN, ROLES.SUPERVISOR],
     MANAGE_LABELS: [ROLES.ADMIN, ROLES.SUPERVISOR],
-    VIEW_STATS: [ROLES.ADMIN, ROLES.SUPERVISOR]
+    VIEW_STATS: [ROLES.ADMIN, ROLES.SUPERVISOR],
+    ASSIGN_ROLES: [ROLES.SUPERVISOR],
+    MANAGE_USERS: [ROLES.SUPERVISOR]
 };
 
 /**
- * Supervisor emails (hardcoded fallback)
- * Primary source is users/{uid}.role in Firestore
+ * Allowed email domain for user registration
+ * Users may only sign up with emails ending in this domain
  */
-export const SUPERVISOR_EMAILS = [
-    'kevlimpens@gmail.com'
-];
+export const ALLOWED_EMAIL_DOMAIN = '@stichtinglvo.nl';
 
 /**
- * Admin emails (hardcoded fallback)
+ * Check if an email is allowed to register
+ * @param {string} email 
+ * @returns {boolean}
  */
-export const ADMIN_EMAILS = [
-    'kevlimpens@gmail.com'
-];
+export function isAllowedEmail(email) {
+    if (!email) return false;
+    return email.toLowerCase().endsWith(ALLOWED_EMAIL_DOMAIN);
+}
 
 /**
  * Check if a role has a specific permission
@@ -56,33 +63,39 @@ export function hasPermission(role, permission) {
 }
 
 /**
- * Get role from email (fallback when Firestore role is not set)
- * @param {string} email 
+ * Determine effective role from custom claims and app-level role
+ * 
+ * CANONICAL RULE:
+ * - Supervisor is ONLY determined via custom claims (isSupervisorClaim)
+ * - Admin is determined via app-level role (for specific app context)
+ * - Default is user
+ * 
+ * @param {boolean} isSupervisorClaim - From Firebase Custom Claims
+ * @param {string} appRole - From /apps/{appId}/users/{uid}.role (optional)
  * @returns {string}
  */
-export function getRoleFromEmail(email) {
-    const lowerEmail = email?.toLowerCase();
-    if (!lowerEmail) return ROLES.USER;
-
-    if (SUPERVISOR_EMAILS.includes(lowerEmail)) {
+export function getEffectiveRole(isSupervisorClaim, appRole = null) {
+    // Supervisor from custom claims takes absolute precedence
+    if (isSupervisorClaim === true) {
         return ROLES.SUPERVISOR;
     }
-    if (ADMIN_EMAILS.includes(lowerEmail)) {
+
+    // App-level admin role
+    if (appRole === 'administrator' || appRole === 'admin') {
         return ROLES.ADMIN;
     }
+
+    // Default to user
     return ROLES.USER;
 }
 
 /**
- * Determine effective role
- * Priority: Firestore role > email-based role
- * @param {string} firestoreRole - Role from user's Firestore document
- * @param {string} email - User's email
+ * Get platform-level role (supervisor or user)
+ * Used for platform-wide access control
+ * 
+ * @param {boolean} isSupervisorClaim - From Firebase Custom Claims
  * @returns {string}
  */
-export function getEffectiveRole(firestoreRole, email) {
-    if (firestoreRole && Object.values(ROLES).includes(firestoreRole)) {
-        return firestoreRole;
-    }
-    return getRoleFromEmail(email);
+export function getPlatformRole(isSupervisorClaim) {
+    return isSupervisorClaim === true ? ROLES.SUPERVISOR : ROLES.USER;
 }

@@ -1,0 +1,150 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    /* ============================================================
+       DEFAULT: DENY EVERYTHING
+    ============================================================ */
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    /* ============================================================
+       HELPER FUNCTIONS (CANON)
+    ============================================================ */
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Supervisor ONLY via custom claims
+    function isSupervisor() {
+      return isAuthenticated() && request.auth.token.supervisor == true;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // App admin (per app)
+    function isAppAdmin(appId) {
+      return isSupervisor() || (
+        isAuthenticated() &&
+        exists(/databases/$(database)/documents/apps/$(appId)/users/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/apps/$(appId)/users/$(request.auth.uid)).data.role == 'administrator'
+      );
+    }
+
+    // Platform admin = admin of dacapotools app
+    function isPlatformAdmin() {
+      return isSupervisor() || (
+        isAuthenticated() &&
+        exists(/databases/$(database)/documents/apps/dacapotools/users/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/apps/dacapotools/users/$(request.auth.uid)).data.role == 'administrator'
+      );
+    }
+
+    /* ============================================================
+       HARD DENY — LEGACY PATHS
+    ============================================================ */
+    match /users/{userId}/apps/{document=**} {
+      allow read, write: if false;
+    }
+
+    match /nieuwsbrief/{document=**} {
+      allow read, write: if false;
+    }
+
+    match /guest_registrations/{document=**} {
+      allow read, write: if false;
+    }
+
+    /* ============================================================
+       USERS (IDENTITY ONLY)
+       /users/{uid}
+    ============================================================ */
+    match /users/{userId} {
+      allow read: if isOwner(userId) || isSupervisor();
+      allow create: if isOwner(userId);
+      allow update: if isOwner(userId) || isSupervisor();
+      allow delete: if isSupervisor();
+    }
+
+    /* ============================================================
+       GLOBAL COLLECTIONS
+    ============================================================ */
+    match /tools/{toolId} {
+      allow read: if true;
+      allow create, update, delete: if isPlatformAdmin();
+    }
+
+    match /labels/{labelId} {
+      allow read: if true;
+      allow create, update, delete: if isPlatformAdmin();
+    }
+
+    match /toolClicks/{clickId} {
+      allow create: if isAuthenticated();
+      allow read: if isPlatformAdmin();
+      allow update, delete: if false;
+    }
+
+    /* ============================================================
+       APPS (CANON ROOT)
+       /apps/{appId}
+    ============================================================ */
+    match /apps/{appId} {
+
+      // App registry / meta
+      allow read: if isAuthenticated();
+      allow create, update, delete: if isSupervisor();
+
+      /* ---------------------------
+         APP CONFIG
+      --------------------------- */
+      match /config/{document=**} {
+        allow read: if isAuthenticated();
+        allow write: if isSupervisor();
+      }
+
+      /* ---------------------------
+         APP DATA
+         - Read: all authenticated users
+         - Write: app admin or supervisor
+      --------------------------- */
+      match /data/{document=**} {
+        allow read: if isAuthenticated();
+        allow write: if isAppAdmin(appId);
+      }
+
+      /* ---------------------------
+         APP USERS (ROLES + CREDITS)
+         - Read:
+           - owner (own doc)
+           - app admin (all in app)
+           - platform admin
+         - Write: BLOCKED (Cloud Functions only)
+      --------------------------- */
+      match /users/{userId} {
+        allow read: if isOwner(userId) || isAppAdmin(appId) || isPlatformAdmin();
+        allow create, update, delete: if false;
+      }
+
+      /* ---------------------------
+         CREDIT LEDGER (AUDIT)
+         - Read: platform admin or supervisor
+         - Write: BLOCKED
+      --------------------------- */
+      match /creditLedger/{entryId} {
+        allow read: if isPlatformAdmin();
+        allow create, update, delete: if false;
+      }
+
+      /* ---------------------------
+         LOGS (OPTIONAL)
+      --------------------------- */
+      match /logs/{document=**} {
+        allow read, write: if isAppAdmin(appId);
+      }
+    }
+  }
+}

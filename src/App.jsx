@@ -17,6 +17,7 @@ const AdminCosts = lazy(() => import('./pages/admin/AdminCosts'));
 const AdminLabels = lazy(() => import('./pages/admin/AdminLabels'));
 const AdminReports = lazy(() => import('./pages/admin/AdminReports'));
 const AdminNewsletterAnalytics = lazy(() => import('./pages/admin/AdminNewsletterAnalytics'));
+const AdminUserDetail = lazy(() => import('./pages/admin/AdminUserDetail'));
 
 // Loading fallback component
 function AdminLoadingFallback() {
@@ -45,6 +46,7 @@ export default function App() {
               <Route path="tools/:id" element={<Suspense fallback={<AdminLoadingFallback />}><AdminToolForm /></Suspense>} />
               <Route path="tools/new" element={<Suspense fallback={<AdminLoadingFallback />}><AdminToolForm /></Suspense>} />
               <Route path="users" element={<Suspense fallback={<AdminLoadingFallback />}><AdminUsers /></Suspense>} />
+              <Route path="users/:userId" element={<Suspense fallback={<AdminLoadingFallback />}><AdminUserDetail /></Suspense>} />
               <Route path="credits" element={<Suspense fallback={<AdminLoadingFallback />}><AdminCredits /></Suspense>} />
               <Route path="costs" element={<Suspense fallback={<AdminLoadingFallback />}><AdminCosts /></Suspense>} />
               <Route path="labels" element={<Suspense fallback={<AdminLoadingFallback />}><AdminLabels /></Suspense>} />

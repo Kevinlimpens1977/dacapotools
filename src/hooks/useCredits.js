@@ -1,11 +1,14 @@
 /**
- * useCredits Hook
+ * useCredits Hook - CANONICAL IMPLEMENTATION
+ * DaCapo Tools v1.0
  * 
  * React hook for managing per-app credits.
  * Provides credit data, loading state, and deduction functions.
  * 
- * Credits are deducted by app logic after successful actions,
- * not by user interaction.
+ * CANONICAL RULES:
+ * - Credits are per-app: /apps/{appId}/users/{uid}
+ * - All mutations via Cloud Functions
+ * - Frontend is READ-ONLY (except for triggering Cloud Functions)
  */
 
 import { useState, useEffect, useCallback } from 'react';
@@ -14,6 +17,7 @@ import {
     getCredits,
     deductCredits as deductCreditsService,
     checkCredits as checkCreditsService,
+    initializeCredits,
     getNextResetDate,
     formatResetDate
 } from '../services/CreditService';
@@ -40,10 +44,33 @@ export function useCredits(appId) {
             return;
         }
 
+        // Skip if app doesn't use credits
+        if (!appConfig?.hasCredits) {
+            setCredits(null);
+            setLoading(false);
+            return;
+        }
+
         try {
             setLoading(true);
             setError(null);
-            const creditsData = await getCredits(user.uid, appId);
+            let creditsData = await getCredits(user.uid, appId);
+
+            // Initialize if not exists
+            if (!creditsData) {
+                try {
+                    const initResult = await initializeCredits(user.uid, appId);
+                    creditsData = initResult.data || initResult;
+                } catch (initError) {
+                    console.error('[useCredits] Error initializing credits:', initError);
+                    // Return default structure
+                    creditsData = {
+                        credits: appConfig.monthlyLimit || 0,
+                        totalUsedThisMonth: 0
+                    };
+                }
+            }
+
             setCredits(creditsData);
         } catch (err) {
             console.error('[useCredits] Error fetching credits:', err);
@@ -51,7 +78,7 @@ export function useCredits(appId) {
         } finally {
             setLoading(false);
         }
-    }, [user?.uid, appId]);
+    }, [user?.uid, appId, appConfig]);
 
     useEffect(() => {
         fetchCredits();
@@ -65,6 +92,7 @@ export function useCredits(appId) {
      */
     const hasEnoughCredits = useCallback(async (amount = 1) => {
         if (!user?.uid || !appId) return false;
+        if (!appConfig?.hasCredits) return true; // App doesn't use credits
 
         try {
             const result = await checkCreditsService(user.uid, appId, amount);
@@ -73,27 +101,33 @@ export function useCredits(appId) {
             console.error('[useCredits] Error checking credits:', err);
             return false;
         }
-    }, [user?.uid, appId]);
+    }, [user?.uid, appId, appConfig]);
 
     /**
      * Deduct credits after a successful app action
-     * Should be called ONLY after the action succeeds
+     * Uses Cloud Function - should be called ONLY after the action succeeds
      * @param {number} amount - Amount to deduct (default: 1)
+     * @param {string} action - Description of the action
      * @returns {Promise<{success: boolean, creditsRemaining?: number, message?: string}>}
      */
-    const deductCredits = useCallback(async (amount = 1) => {
+    const deductCredits = useCallback(async (amount = 1, action = 'consumption') => {
         if (!user?.uid || !appId) {
             return { success: false, message: 'Niet ingelogd' };
         }
 
+        if (!appConfig?.hasCredits) {
+            return { success: true, message: 'App gebruikt geen credits' };
+        }
+
         try {
-            const result = await deductCreditsService(user.uid, appId, amount);
+            const result = await deductCreditsService(user.uid, appId, amount, action);
 
             if (result.success) {
                 // Update local state
                 setCredits(prev => ({
                     ...prev,
-                    creditsRemaining: result.creditsRemaining,
+                    credits: result.creditsRemaining,
+                    creditsRemaining: result.creditsRemaining, // Legacy field
                     totalUsedThisMonth: result.totalUsedThisMonth
                 }));
             }
@@ -103,7 +137,7 @@ export function useCredits(appId) {
             console.error('[useCredits] Error deducting credits:', err);
             return { success: false, message: err.message };
         }
-    }, [user?.uid, appId]);
+    }, [user?.uid, appId, appConfig]);
 
     /**
      * Refresh credits from Firestore
@@ -112,8 +146,8 @@ export function useCredits(appId) {
         return fetchCredits();
     }, [fetchCredits]);
 
-    // Computed values
-    const creditsRemaining = credits?.creditsRemaining ?? 0;
+    // Computed values - support both canonical and legacy field names
+    const creditsRemaining = credits?.credits ?? credits?.creditsRemaining ?? 0;
     const monthlyLimit = credits?.monthlyLimit ?? appConfig?.monthlyLimit ?? 0;
     const totalUsedThisMonth = credits?.totalUsedThisMonth ?? 0;
     const creditUnit = appConfig?.creditUnit ?? 'credit';

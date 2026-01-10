@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { ALLOWED_EMAIL_DOMAIN, isAllowedEmail } from '../config/roles';
 
 export default function LoginModal({ isOpen, onClose }) {
     const {
@@ -131,10 +132,10 @@ export default function LoginModal({ isOpen, onClose }) {
                     {/* Message */}
                     {(message || authError) && (
                         <div className={`mb-4 p-3 rounded-lg text-sm ${message?.type === 'success'
-                                ? 'bg-green-500/10 border border-green-500 text-green-600 dark:text-green-400'
-                                : message?.type === 'warning'
-                                    ? 'bg-yellow-500/10 border border-yellow-500 text-yellow-600 dark:text-yellow-400'
-                                    : 'bg-red-500/10 border border-red-500 text-red-600 dark:text-red-400'
+                            ? 'bg-green-500/10 border border-green-500 text-green-600 dark:text-green-400'
+                            : message?.type === 'warning'
+                                ? 'bg-yellow-500/10 border border-yellow-500 text-yellow-600 dark:text-yellow-400'
+                                : 'bg-red-500/10 border border-red-500 text-red-600 dark:text-red-400'
                             }`}>
                             {message?.text || authError}
                         </div>
@@ -152,7 +153,7 @@ export default function LoginModal({ isOpen, onClose }) {
                                     id="email"
                                     value={email}
                                     onChange={(e) => setEmail(e.target.value)}
-                                    placeholder="naam@dacapocollege.nl"
+                                    placeholder="naam@stichtinglvo.nl"
                                     className="w-full h-12 px-4 rounded-lg border border-theme bg-gray-100 dark:bg-gray-700 focus:ring-2 focus:ring-[#2860E0] focus:border-transparent"
                                 />
                             </div>
@@ -206,17 +207,23 @@ export default function LoginModal({ isOpen, onClose }) {
                             </div>
                             <div>
                                 <label htmlFor="regEmail" className="block text-sm font-medium mb-1">
-                                    Email *
+                                    Email * <span className="text-secondary font-normal">({ALLOWED_EMAIL_DOMAIN})</span>
                                 </label>
                                 <input
                                     type="email"
                                     id="regEmail"
                                     value={email}
                                     onChange={(e) => setEmail(e.target.value)}
-                                    placeholder="naam@dacapocollege.nl"
+                                    placeholder={`naam${ALLOWED_EMAIL_DOMAIN}`}
                                     required
-                                    className="w-full h-12 px-4 rounded-lg border border-theme bg-gray-100 dark:bg-gray-700 focus:ring-2 focus:ring-[#2860E0] focus:border-transparent"
+                                    className={`w-full h-12 px-4 rounded-lg border bg-gray-100 dark:bg-gray-700 focus:ring-2 focus:ring-[#2860E0] focus:border-transparent ${email && !isAllowedEmail(email) ? 'border-red-500' : 'border-theme'
+                                        }`}
                                 />
+                                {email && !isAllowedEmail(email) && (
+                                    <p className="text-xs text-red-500 mt-1">
+                                        Gebruik een {ALLOWED_EMAIL_DOMAIN} emailadres
+                                    </p>
+                                )}
                             </div>
                             <div>
                                 <label htmlFor="regPassword" className="block text-sm font-medium mb-1">
@@ -272,7 +279,7 @@ export default function LoginModal({ isOpen, onClose }) {
                                     id="forgotEmail"
                                     value={email}
                                     onChange={(e) => setEmail(e.target.value)}
-                                    placeholder="naam@dacapocollege.nl"
+                                    placeholder="naam@stichtinglvo.nl"
                                     required
                                     className="w-full h-12 px-4 rounded-lg border border-theme bg-gray-100 dark:bg-gray-700 focus:ring-2 focus:ring-[#2860E0] focus:border-transparent"
                                 />

@@ -1,0 +1,49 @@
+ANTIGRAVITY — CANON LOCK
+
+You are not generating code.
+You are generating a canonical reference document.
+
+Project: DaCapo Tools
+
+Goal:
+Create the definitive canonical reference for:
+- Firestore data structure
+- App topology
+- Ownership rules
+- Credits model
+- Legacy deprecation
+
+This document is LAW.
+No legacy compatibility is required.
+No alternative interpretations are allowed.
+
+--------------------------------------------------
+
+# DaCapo Canonical Reference
+
+## 1. Core Principles
+
+- Firestore is the single source of truth.
+- All application data lives under `/apps/{appId}`.
+- Frontend location NEVER determines data ownership.
+- Users do not own apps. Apps own users.
+- Legacy structures are forbidden.
+
+--------------------------------------------------
+
+## 2. App Topology (Canonical)
+
+- `dacapotools.nl` is the central launcher / portal.
+- Each tool is a standalone app hosted on its own subdomain:
+  - `{appId}.dacapotools.nl`
+- Subdomain name MUST equal `appId`.
+
+Examples:
+- nieuwsbrief.dacapotools.nl → `appId = nieuwsbrief`
+- pacogenerator.dacapotools.nl → `appId = pacogenerator`
+- nablijfapp.dacapotools.nl → `appId = nablijfapp`
+
+--------------------------------------------------
+
+## 3. Firestore Canonical Structure
+

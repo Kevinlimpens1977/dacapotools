@@ -1,3 +1,20 @@
+/**
+ * AuthContext - CANONICAL IMPLEMENTATION
+ * 
+ * DaCapo Tools v1.0
+ * 
+ * SUPERVISOR POLICY (ABSOLUTE):
+ * - There is EXACTLY ONE supervisor
+ * - Supervisor role is determined EXCLUSIVELY via Firebase Custom Claims
+ * - NO Firestore-based supervisor resolution is allowed
+ * - Custom claim: request.auth.token.supervisor === true
+ * 
+ * USER POLICY:
+ * - Users may only sign up with email ending in @stichtinglvo.nl
+ * - On first login: create /users/{uid} (identity only)
+ * - App roles are stored in /apps/{appId}/users/{uid}
+ */
+
 import { createContext, useContext, useState, useEffect } from 'react';
 import {
     onAuthStateChanged,
@@ -5,11 +22,12 @@ import {
     createUserWithEmailAndPassword,
     sendEmailVerification,
     sendPasswordResetEmail,
-    signOut as firebaseSignOut
+    signOut as firebaseSignOut,
+    getIdTokenResult
 } from 'firebase/auth';
 import { doc, getDoc, setDoc, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
-import { auth, db, ADMIN_EMAIL } from '../firebase';
-import { getEffectiveRole, hasPermission as checkPermission, ROLES } from '../config/roles';
+import { auth, db } from '../firebase';
+import { getEffectiveRole, getPlatformRole, hasPermission as checkPermission, ROLES, isAllowedEmail, ALLOWED_EMAIL_DOMAIN } from '../config/roles';
 import { useTheme } from './ThemeContext';
 
 const AuthContext = createContext();
@@ -17,16 +35,23 @@ const AuthContext = createContext();
 export function AuthProvider({ children }) {
     const [user, setUser] = useState(null);
     const [userData, setUserData] = useState(null);
+    const [customClaims, setCustomClaims] = useState(null);
     const [loading, setLoading] = useState(true);
     const [authError, setAuthError] = useState(null);
 
     // Theme context for loading/saving theme preference
     const { setThemeFromPreference, getThemePreference } = useTheme();
 
-    // Compute role from Firestore role field (primary) or email fallback
-    const userRole = getEffectiveRole(userData?.role, user?.email);
-    const isAdmin = userRole === ROLES.ADMIN || userRole === ROLES.SUPERVISOR;
-    const isSupervisor = userRole === ROLES.SUPERVISOR;
+    // CANONICAL: Supervisor is determined EXCLUSIVELY from custom claims
+    const isSupervisor = customClaims?.supervisor === true;
+
+    // Platform role (supervisor or user - no Firestore lookup)
+    const platformRole = getPlatformRole(isSupervisor);
+
+    // For backward compatibility: userRole and isAdmin
+    // In canonical model, admin is per-app, but for platform-level we use platformRole
+    const userRole = platformRole;
+    const isAdmin = isSupervisor; // Only supervisor has admin-level platform access
 
     /**
      * Check if current user has a specific permission
@@ -35,12 +60,43 @@ export function AuthProvider({ children }) {
      */
     const hasPermission = (permission) => checkPermission(userRole, permission);
 
+    /**
+     * Get app-specific role for a user
+     * @param {string} appId - The app to check role for
+     * @returns {Promise<string>} - 'user', 'administrator', or 'supervisor'
+     */
+    const getAppRole = async (appId) => {
+        if (isSupervisor) return ROLES.SUPERVISOR;
+        if (!user?.uid || !appId) return ROLES.USER;
+
+        try {
+            const appUserRef = doc(db, 'apps', appId, 'users', user.uid);
+            const appUserSnap = await getDoc(appUserRef);
+            if (appUserSnap.exists()) {
+                const appRole = appUserSnap.data()?.role;
+                return getEffectiveRole(isSupervisor, appRole);
+            }
+        } catch (error) {
+            console.error('[Auth] Error fetching app role:', error);
+        }
+        return ROLES.USER;
+    };
+
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
             setUser(firebaseUser);
 
             if (firebaseUser) {
-                // Fetch or create user document in Firestore
+                // CANONICAL: Get custom claims for supervisor check
+                try {
+                    const tokenResult = await getIdTokenResult(firebaseUser);
+                    setCustomClaims(tokenResult.claims);
+                } catch (error) {
+                    console.error('[Auth] Error getting custom claims:', error);
+                    setCustomClaims({});
+                }
+
+                // Fetch or create user document in Firestore (identity only)
                 const userRef = doc(db, 'users', firebaseUser.uid);
                 const userSnap = await getDoc(userRef);
 
@@ -52,21 +108,22 @@ export function AuthProvider({ children }) {
                     // Update last login
                     await updateDoc(userRef, { lastLogin: new Date() });
                 } else {
-                    // Create new user document
+                    // Create new user document (identity only - NO role field)
                     const newUserData = {
                         email: firebaseUser.email,
                         displayName: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || '',
                         photoURL: firebaseUser.photoURL || '',
                         favorites: [],
-                        isAdmin: firebaseUser.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase(),
                         createdAt: new Date(),
                         lastLogin: new Date()
+                        // NOTE: No 'role' field - roles are per-app or via custom claims
                     };
                     await setDoc(userRef, newUserData);
                     setUserData(newUserData);
                 }
             } else {
                 setUserData(null);
+                setCustomClaims(null);
             }
 
             setLoading(false);
@@ -74,8 +131,6 @@ export function AuthProvider({ children }) {
 
         return () => unsubscribe();
     }, []);
-
-
 
     // Email/Password Sign In
     const signInWithEmail = async (email, password) => {
@@ -101,21 +156,36 @@ export function AuthProvider({ children }) {
         }
     };
 
-    // Email/Password Registration
+    // Email/Password Registration - CANONICAL: Only @stichtinglvo.nl allowed
     const registerWithEmail = async (email, password, displayName = '') => {
         try {
             setAuthError(null);
+
+            // CANONICAL: Validate email domain
+            if (!isAllowedEmail(email)) {
+                const message = `Registratie is alleen mogelijk met een ${ALLOWED_EMAIL_DOMAIN} emailadres.`;
+                setAuthError(message);
+                return { success: false, message };
+            }
+
             const userCredential = await createUserWithEmailAndPassword(auth, email, password);
 
             // Send verification email
             await sendEmailVerification(userCredential.user);
             console.log('[Auth] Verification email sent to:', email);
 
-            // Update display name in user data
-            if (displayName) {
-                const userRef = doc(db, 'users', userCredential.user.uid);
-                await updateDoc(userRef, { displayName });
-            }
+            // Create user document with display name
+            const userRef = doc(db, 'users', userCredential.user.uid);
+            const newUserData = {
+                email: userCredential.user.email,
+                displayName: displayName || email.split('@')[0],
+                photoURL: '',
+                favorites: [],
+                createdAt: new Date(),
+                lastLogin: new Date()
+                // NOTE: No 'role' field - roles are per-app or via custom claims
+            };
+            await setDoc(userRef, newUserData);
 
             return {
                 success: true,
@@ -205,6 +275,19 @@ export function AuthProvider({ children }) {
         return userData?.favorites?.includes(toolId) || false;
     };
 
+    // Refresh custom claims (call after role changes)
+    const refreshClaims = async () => {
+        if (auth.currentUser) {
+            try {
+                await auth.currentUser.getIdToken(true); // Force refresh
+                const tokenResult = await getIdTokenResult(auth.currentUser);
+                setCustomClaims(tokenResult.claims);
+            } catch (error) {
+                console.error('[Auth] Error refreshing claims:', error);
+            }
+        }
+    };
+
     // Clear auth error
     const clearError = () => setAuthError(null);
 
@@ -212,12 +295,16 @@ export function AuthProvider({ children }) {
         <AuthContext.Provider value={{
             user,
             userData,
+            customClaims,
             loading,
-            // Role system
+            // Role system - CANONICAL
             userRole,
+            platformRole,
             isAdmin,
             isSupervisor,
             hasPermission,
+            getAppRole,
+            refreshClaims,
             // Auth methods
             authError,
             signInWithEmail,

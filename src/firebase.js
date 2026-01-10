@@ -1,8 +1,10 @@
 // Firebase configuration for DaCapo Toolbox
+// CANONICAL IMPLEMENTATION - v1.0
 import { initializeApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
+import { getFunctions } from 'firebase/functions';
 
 const firebaseConfig = {
     apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -25,7 +27,7 @@ export const db = getFirestore(app);
 // Initialize Storage
 export const storage = getStorage(app);
 
-// Admin email configuration
-export const ADMIN_EMAIL = 'kevlimpens@gmail.com';
+// Initialize Cloud Functions
+export const functions = getFunctions(app, 'europe-west1');
 
 export default app;
