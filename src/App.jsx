@@ -3,7 +3,7 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { ThemeProvider } from './context/ThemeContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import Dashboard from './pages/Dashboard';
-import LoginModal from './components/LoginModal';
+import LoginLanding from './components/LoginLanding';
 
 // Admin Layout (loaded immediately as it's the wrapper)
 import AdminLayout from './components/admin/AdminLayout';
@@ -63,12 +63,7 @@ function AuthGate({ children }) {
 
   // User is NOT authenticated → show login screen
   if (!user) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 p-4">
-        {/* Render LoginModal as full-screen login (always open, no close) */}
-        <LoginModal isOpen={true} onClose={() => { }} />
-      </div>
-    );
+    return <LoginLanding />;
   }
 
   // User IS authenticated → render app
