@@ -89,6 +89,15 @@ service cloud.firestore {
     }
 
     /* ============================================================
+       ADMIN CONFIG (Cost config, etc.)
+       /admin/{docId}
+    ============================================================ */
+    match /admin/{docId} {
+      allow read: if isSupervisor();
+      allow write: if isSupervisor();
+    }
+
+    /* ============================================================
        APPS (CANON ROOT)
        /apps/{appId}
     ============================================================ */
@@ -127,6 +136,16 @@ service cloud.firestore {
       match /users/{userId} {
         allow read: if isOwner(userId) || isAppAdmin(appId) || isPlatformAdmin();
         allow create, update, delete: if false;
+
+        /* ---------------------------
+           USER COSTS (per user per app)
+           - Read: supervisor only
+           - Write: BLOCKED (Cloud Functions only)
+        --------------------------- */
+        match /costs/{monthKey} {
+          allow read: if isSupervisor();
+          allow create, update, delete: if false;
+        }
       }
 
       /* ---------------------------
@@ -136,6 +155,16 @@ service cloud.firestore {
       --------------------------- */
       match /creditLedger/{entryId} {
         allow read: if isPlatformAdmin();
+        allow create, update, delete: if false;
+      }
+
+      /* ---------------------------
+         APP COSTS (aggregated per app)
+         - Read: supervisor only
+         - Write: BLOCKED (Cloud Functions only)
+      --------------------------- */
+      match /costs/{monthKey} {
+        allow read: if isSupervisor();
         allow create, update, delete: if false;
       }
 

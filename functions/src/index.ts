@@ -13,3 +13,7 @@ export { initAppUser } from './credits/initAppUser';
 export { getCredits } from './credits/getCredits';
 export { consumeCredits } from './credits/consumeCredits';
 export { adminAdjustCredits } from './credits/adminAdjustCredits';
+
+// Costs
+export { aggregateCosts } from './costs/aggregateCosts';
+export { aggregateCostsManual } from './costs/aggregateCosts';

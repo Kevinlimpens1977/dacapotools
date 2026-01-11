@@ -13,12 +13,9 @@
 import { useState, useEffect, useMemo } from 'react';
 import { httpsCallable } from 'firebase/functions';
 import { functions } from '../../firebase';
-import { useAuth } from '../../context/AuthContext';
 import { APP_CREDITS_CONFIG, getAllAppIds } from '../../config/appCredits';
 
 export default function AdminCredits() {
-    const { isSupervisor } = useAuth();
-
     // Live costs per app: { [appId]: { totalUsage, totalCost, monthKey } }
     const [appCosts, setAppCosts] = useState({});
     const [loading, setLoading] = useState(true);
@@ -71,7 +68,7 @@ export default function AdminCredits() {
 
     if (loading) {
         return (
-            <div className="flex items-content justify-center py-12">
+            <div className="flex items-center justify-center py-12">
                 <div className="text-center">
                     <span className="material-symbols-outlined text-4xl animate-spin text-[#2860E0]">
                         sync
@@ -85,29 +82,15 @@ export default function AdminCredits() {
     return (
         <div className="space-y-6 max-w-7xl">
             {/* Header */}
-            <div className="flex items-center justify-between">
-                <div>
-                    <h2 className="text-2xl font-bold">Kosten</h2>
-                    <p className="text-secondary mt-1">
-                        Overzicht van platformkosten per app ({currentMonthKey})
-                    </p>
+            <div>
+                <h2 className="text-2xl font-bold">Kosten</h2>
+                <p className="text-secondary mt-1">
+                    Overzicht van platformkosten per app ({currentMonthKey})
+                </p>
+                <div className="text-xs text-green-600 bg-green-50 dark:bg-green-900/20 px-2 py-1 rounded inline-block mt-2">
+                    <span className="material-symbols-outlined text-sm align-middle mr-1">cloud_done</span>
+                    Live data via Cloud Functions
                 </div>
-                {/* Role indicator */}
-                <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium ${isSupervisor
-                    ? 'bg-purple-500/10 text-purple-600 dark:text-purple-400'
-                    : 'bg-blue-500/10 text-blue-600 dark:text-blue-400'
-                    }`}>
-                    <span className="material-symbols-outlined text-sm">
-                        visibility
-                    </span>
-                    Alleen-lezen
-                </div>
-            </div>
-
-            {/* Live data indicator */}
-            <div className="text-xs text-green-600 bg-green-50 dark:bg-green-900/20 px-2 py-1 rounded inline-block">
-                <span className="material-symbols-outlined text-sm align-middle mr-1">cloud_done</span>
-                Live data via Cloud Functions
             </div>
 
             {/* Total Cost Card */}
@@ -171,4 +154,3 @@ export default function AdminCredits() {
         </div>
     );
 }
-

@@ -62,6 +62,40 @@ export default function AdminToolForm() {
     const selectedPrimaryLabel = getPrimaryLabel(formData.labels);
     const isExternal = isExternalTool(formData.labels);
 
+    /**
+     * Normalize URL input to ensure it's a valid absolute URL.
+     * Rules:
+     * - If input starts with http:// or https:// → keep exactly as entered
+     * - If input contains a domain (has a dot, e.g. "paco.dacapotools.nl") → prepend https://
+     * - If input is a relative path (starts with /) → prepend the main domain
+     * - Otherwise, treat as relative path and prepend main domain
+     */
+    const normalizeUrl = (input) => {
+        if (!input || typeof input !== 'string') return '';
+
+        const trimmed = input.trim();
+        if (!trimmed) return '';
+
+        // Already has a protocol - keep exactly as entered
+        if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+            return trimmed;
+        }
+
+        // Contains a domain (has a dot) - this is an absolute URL without protocol
+        // Examples: "paco.dacapotools.nl", "google.com/path"
+        if (trimmed.includes('.')) {
+            return `https://${trimmed}`;
+        }
+
+        // Relative path (starts with /) - prepend main domain
+        if (trimmed.startsWith('/')) {
+            return `https://dacapotools.nl${trimmed}`;
+        }
+
+        // No protocol, no domain, no leading slash - treat as relative path
+        return `https://dacapotools.nl/${trimmed}`;
+    };
+
     // No edit access for non-supervisors
     if (!isSupervisor) {
         return (
@@ -155,10 +189,15 @@ export default function AdminToolForm() {
         try {
             setSaving(true);
 
+            // Normalize the URL before saving
+            const rawUrl = formData.url || formData.externalUrl;
+            const normalizedUrl = normalizeUrl(rawUrl);
+
             // Prepare data for saving
             const saveData = {
                 ...formData,
-                url: formData.url || formData.externalUrl, // Ensure url is set
+                url: normalizedUrl, // Store the normalized URL
+                externalUrl: normalizedUrl, // Keep in sync
                 internalRoute: null // Explicitly clear internalRoute
             };
 
@@ -370,12 +409,16 @@ export default function AdminToolForm() {
                                         }));
                                     }}
                                     className="w-full h-12 px-4 rounded-lg border border-theme bg-gray-50 dark:bg-gray-800"
-                                    placeholder="https://example.com"
+                                    placeholder="paco.dacapotools.nl of https://..."
                                     required
                                 />
                                 <p className="text-xs text-secondary mt-2">
                                     <span className="material-symbols-outlined text-sm align-middle mr-1">open_in_new</span>
                                     Link opent altijd in een nieuw tabblad.
+                                </p>
+                                <p className="text-xs text-secondary mt-1">
+                                    <span className="material-symbols-outlined text-sm align-middle mr-1">info</span>
+                                    Subdomeinen (bijv. "paco.dacapotools.nl") worden automatisch omgezet naar https://. Relatieve paden (bijv. "/paco") worden gekoppeld aan dacapotools.nl.
                                 </p>
                             </div>
                         </div>

@@ -1,7 +1,26 @@
 import { useEffect, useRef } from 'react';
 import { getPrimaryLabelInfo, isExternalTool } from '../config/toolLabels';
 
-// Lightweight Markdown Parser
+/**
+ * Normalize external URL to ensure it has a protocol.
+ * If the URL doesn't start with http:// or https://, prefix with https://
+ * Internal routes (starting with /) are left unchanged.
+ */
+function normalizeExternalUrl(url) {
+    if (!url) return url;
+
+    // Internal routes - don't modify
+    if (url.startsWith('/')) return url;
+
+    // Already has protocol - leave unchanged
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+        return url;
+    }
+
+    // No protocol - add https://
+    return `https://${url}`;
+}
+
 function renderMarkdown(text) {
     if (!text) return null;
 
@@ -132,7 +151,9 @@ export default function ToolDetailDrawer({ tool, onClose }) {
 
     const primaryLabel = getPrimaryLabelInfo(tool.labels);
     const isExternal = isExternalTool(tool.labels);
-    const toolUrl = tool.externalUrl || tool.url || tool.internalRoute;
+    // Normalize external URLs to ensure they have https:// prefix
+    const rawUrl = tool.externalUrl || tool.url || tool.internalRoute;
+    const toolUrl = normalizeExternalUrl(rawUrl);
 
     const handleOpenTool = () => {
         if (toolUrl) {

@@ -8,15 +8,16 @@
  * (e.g., image generation, text translation), NOT on clicking/opening tools.
  */
 
+// PACO RULE: Users may NEVER have more than 10 credits (hard cap)
 export const APP_CREDITS_CONFIG = {
     'paco': {
         appId: 'paco',
         appName: 'Paco Generator',
         hasCredits: true,
-        monthlyLimit: 50,
+        monthlyLimit: 10,  // HARD CAP: max 10 afbeeldingen per maand
         creditUnit: 'afbeelding',
         creditUnitPlural: 'afbeeldingen',
-        description: 'Genereer afbeeldingen met AI'
+        description: 'Maximaal 10 afbeeldingen per maand'
     },
     'translate': {
         appId: 'translate',
