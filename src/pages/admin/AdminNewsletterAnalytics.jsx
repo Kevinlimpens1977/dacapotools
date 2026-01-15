@@ -16,6 +16,12 @@ export default function AdminNewsletterAnalytics() {
     const [loading, setLoading] = useState(true);
     const [items, setItems] = useState([]);
     const [weekRange, setWeekRange] = useState(8); // Default: last 8 weeks
+    const [toast, setToast] = useState(null);
+
+    const handleToast = (id) => {
+        setToast(id);
+        setTimeout(() => setToast(null), 2000);
+    };
 
     // Fetch newsletter items from Firestore
     useEffect(() => {
@@ -206,7 +212,7 @@ export default function AdminNewsletterAnalytics() {
                 <select
                     value={weekRange}
                     onChange={(e) => setWeekRange(Number(e.target.value))}
-                    className="px-3 py-2 rounded-lg border border-theme bg-white dark:bg-gray-800"
+                    className="px-3 py-2 rounded-lg border border-theme bg-[var(--input-bg)]"
                 >
                     <option value={4}>Laatste 4 weken</option>
                     <option value={8}>Laatste 8 weken</option>
@@ -278,7 +284,7 @@ export default function AdminNewsletterAnalytics() {
                         return (
                             <div key={week} className="flex items-center gap-3">
                                 <div className="w-20 text-sm text-secondary">{week}</div>
-                                <div className="flex-1 bg-gray-100 dark:bg-gray-800 rounded-full h-8 overflow-hidden">
+                                <div className="flex-1 bg-[var(--bg-app)] rounded-full h-8 overflow-hidden">
                                     <div
                                         className="bg-[#2860E0] h-full flex items-center justify-end px-3 text-white text-sm font-medium transition-all"
                                         style={{ width: `${percentage}%` }}
@@ -297,7 +303,7 @@ export default function AdminNewsletterAnalytics() {
                 <h3 className="font-semibold mb-4">Submissions per Gebruiker</h3>
                 <div className="overflow-x-auto">
                     <table className="w-full">
-                        <thead className="bg-gray-50 dark:bg-gray-800/50 border-b border-theme">
+                        <thead className="bg-[var(--bg-app)] border-b border-theme">
                             <tr>
                                 <th className="text-left px-4 py-3 font-semibold">Gebruiker</th>
                                 <th className="text-right px-4 py-3 font-semibold">Aantal</th>
@@ -307,7 +313,7 @@ export default function AdminNewsletterAnalytics() {
                             {Object.entries(analytics.itemsByUser)
                                 .sort(([, a], [, b]) => b - a)
                                 .map(([user, count]) => (
-                                    <tr key={user} className="border-b border-theme last:border-0">
+                                    <tr key={user} className="border-b border-theme last:border-0 hover:bg-[var(--bg-surface-hover)]">
                                         <td className="px-4 py-3">{user}</td>
                                         <td className="px-4 py-3 text-right font-medium">{count}</td>
                                     </tr>
@@ -327,7 +333,7 @@ export default function AdminNewsletterAnalytics() {
                 <h3 className="font-semibold mb-4">Verdeling per Doelgroep</h3>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     {Object.entries(analytics.itemsByDoelgroep).map(([doelgroep, count]) => (
-                        <div key={doelgroep} className="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
+                        <div key={doelgroep} className="p-4 bg-[var(--bg-app)] rounded-lg">
                             <p className="text-sm text-secondary mb-1">{doelgroep}</p>
                             <p className="text-2xl font-bold">{count}</p>
                         </div>
@@ -345,25 +351,43 @@ export default function AdminNewsletterAnalytics() {
                 <h3 className="font-semibold mb-4">Exporteren</h3>
                 <div className="flex flex-wrap gap-3">
                     <button
-                        onClick={exportItemsPerWeek}
-                        className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                        onClick={() => handleToast('week')}
+                        className="relative inline-flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
                     >
                         <span className="material-symbols-outlined text-xl">download</span>
                         Items per Week
+                        {toast === 'week' && (
+                            <div className="absolute -top-10 left-1/2 -translate-x-1/2 px-3 py-1.5 bg-gray-900 text-white text-xs rounded shadow-lg whitespace-nowrap animate-in fade-in zoom-in-95 duration-200 z-10">
+                                Dit volgt later...
+                                <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-900"></div>
+                            </div>
+                        )}
                     </button>
                     <button
-                        onClick={exportItemsPerUser}
-                        className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                        onClick={() => handleToast('user')}
+                        className="relative inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                     >
                         <span className="material-symbols-outlined text-xl">download</span>
                         Items per Gebruiker
+                        {toast === 'user' && (
+                            <div className="absolute -top-10 left-1/2 -translate-x-1/2 px-3 py-1.5 bg-gray-900 text-white text-xs rounded shadow-lg whitespace-nowrap animate-in fade-in zoom-in-95 duration-200 z-10">
+                                Dit volgt later...
+                                <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-900"></div>
+                            </div>
+                        )}
                     </button>
                     <button
-                        onClick={exportDoelgroepDistribution}
-                        className="inline-flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+                        onClick={() => handleToast('doelgroep')}
+                        className="relative inline-flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
                     >
                         <span className="material-symbols-outlined text-xl">download</span>
                         Doelgroep Verdeling
+                        {toast === 'doelgroep' && (
+                            <div className="absolute -top-10 left-1/2 -translate-x-1/2 px-3 py-1.5 bg-gray-900 text-white text-xs rounded shadow-lg whitespace-nowrap animate-in fade-in zoom-in-95 duration-200 z-10">
+                                Dit volgt later...
+                                <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-900"></div>
+                            </div>
+                        )}
                     </button>
                 </div>
                 <p className="text-sm text-secondary mt-3">

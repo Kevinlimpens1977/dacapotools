@@ -62,6 +62,8 @@ export default function AdminUsers() {
         }
     };
 
+    const filteredUsers = users;
+
     if (loading) {
         return (
             <div className="flex items-center justify-center py-12">
@@ -113,32 +115,30 @@ export default function AdminUsers() {
             {/* Users Table */}
             <div className="bg-card rounded-xl border border-theme overflow-x-auto">
                 <table className="w-full">
-                    <thead className="bg-gray-50 dark:bg-gray-800/50 border-b border-theme">
+                    <thead className="bg-[var(--bg-app)] border-b border-theme">
                         <tr>
                             <th className="text-left px-4 py-3 font-semibold">Gebruiker</th>
-                            <th className="text-left px-4 py-3 font-semibold">Globale Rol</th>
-                            <th className="text-left px-4 py-3 font-semibold">Laatste Login</th>
-                            <th className="text-left px-4 py-3 font-semibold">Aangemaakt</th>
-                            {isSupervisor && (
-                                <th className="text-right px-4 py-3 font-semibold">Acties</th>
-                            )}
+                            <th className="text-left px-4 py-3 font-semibold">Rol</th>
+                            <th className="text-left px-4 py-3 font-semibold">Laatst gezien</th>
+                            <th className="text-left px-4 py-3 font-semibold">Lid sinds</th>
+                            <th className="text-right px-4 py-3 font-semibold">Acties</th>
                         </tr>
                     </thead>
                     <tbody>
-                        {users.length === 0 ? (
+                        {filteredUsers.length === 0 ? (
                             <tr>
-                                <td colSpan={isSupervisor ? 5 : 4} className="px-4 py-12 text-center text-secondary">
+                                <td colSpan="5" className="px-4 py-8 text-center text-secondary">
                                     <span className="material-symbols-outlined text-4xl mb-2 block">group</span>
                                     <p>Geen gebruikers gevonden</p>
                                 </td>
                             </tr>
                         ) : (
-                            users.map((user) => {
+                            filteredUsers.map((user) => {
                                 const roleBadge = getRoleBadge(user.role);
                                 const isCurrentUser = user.id === currentUser?.uid;
 
                                 return (
-                                    <tr key={user.id} className="border-b border-theme last:border-0 hover:bg-gray-50 dark:hover:bg-gray-800/30">
+                                    <tr key={user.id} className="border-b border-theme last:border-0 hover:bg-[var(--bg-surface-hover)]">
                                         <td className="px-4 py-3">
                                             <div className="flex items-center gap-3">
                                                 <div className="size-10 rounded-full bg-[#2860E0] flex items-center justify-center text-white font-medium shrink-0">

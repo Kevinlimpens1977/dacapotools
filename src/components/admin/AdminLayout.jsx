@@ -20,7 +20,7 @@ export default function AdminLayout() {
     // Show loading state while checking authentication
     if (loading) {
         return (
-            <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+            <div className="min-h-screen flex items-center justify-center bg-[var(--bg-app)]">
                 <div className="text-center">
                     <span className="material-symbols-outlined text-4xl animate-spin text-[#2860E0]">
                         sync
@@ -39,7 +39,7 @@ export default function AdminLayout() {
     // Redirect if user role (not admin or supervisor)
     if (userRole === 'user') {
         return (
-            <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+            <div className="min-h-screen flex items-center justify-center bg-[var(--bg-app)]">
                 <div className="text-center max-w-md px-4">
                     <span className="material-symbols-outlined text-6xl text-red-500">
                         block
@@ -61,7 +61,7 @@ export default function AdminLayout() {
     }
 
     return (
-        <div className="min-h-screen flex bg-gray-50 dark:bg-gray-900">
+        <div className="min-h-screen flex bg-[var(--bg-app)] transition-colors duration-200">
             {/* Sidebar */}
             <AdminSidebar />
 

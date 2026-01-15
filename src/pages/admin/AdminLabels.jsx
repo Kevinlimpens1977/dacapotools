@@ -75,7 +75,7 @@ export default function AdminLabels() {
                                 </span>
                             </div>
 
-                            <span className="text-xs text-secondary font-mono bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded">
+                            <span className="text-xs font-mono bg-[var(--bg-surface-hover)] text-primary px-2 py-1 rounded">
                                 {label.id}
                             </span>
                         </div>
@@ -107,7 +107,7 @@ export default function AdminLabels() {
                         </p>
                     </div>
 
-                    <span className="text-xs text-secondary font-mono bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded">
+                    <span className="text-xs font-mono bg-[var(--bg-surface-hover)] text-primary px-2 py-1 rounded">
                         {EXTERN_LABEL.id}
                     </span>
                 </div>

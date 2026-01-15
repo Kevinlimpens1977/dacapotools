@@ -260,7 +260,7 @@ export default function AdminCosts() {
                 <p className="text-secondary mt-1">
                     Overzicht van platformkosten per app en gebruiker ({currentMonthKey})
                 </p>
-                <div className="text-xs text-amber-600 bg-amber-50 dark:bg-amber-900/20 px-2 py-1 rounded inline-block mt-2">
+                <div className="text-xs text-amber-600 bg-amber-500/10 px-2 py-1 rounded inline-block mt-2">
                     <span className="material-symbols-outlined text-sm align-middle mr-1">history</span>
                     Data wordt elk uur geüpdatet
                 </div>
@@ -289,7 +289,7 @@ export default function AdminCosts() {
                         const isLoading = liveAppCostsLoading;
 
                         return (
-                            <div key={appId} className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
+                            <div key={appId} className="flex items-center justify-between p-4 bg-[var(--bg-app)] rounded-lg">
                                 <div className="flex items-center gap-4">
                                     <div className="size-12 rounded-lg bg-[#2860E0]/10 flex items-center justify-center">
                                         <span className="material-symbols-outlined text-[#2860E0]">
@@ -342,7 +342,7 @@ export default function AdminCosts() {
                                         value={editingPrices[appId] !== undefined ? editingPrices[appId] : price}
                                         onChange={(e) => handlePriceInput(appId, e.target.value)}
                                         onBlur={() => handlePriceSave(appId)}
-                                        className="flex-1 px-3 py-2 rounded-lg border border-theme bg-white dark:bg-gray-800 disabled:opacity-60 disabled:cursor-not-allowed"
+                                        className="flex-1 px-3 py-2 rounded-lg border border-theme bg-[var(--input-bg)] disabled:opacity-60 disabled:cursor-not-allowed"
                                         disabled={!isSupervisor || saving}
                                     />
                                     <span className="text-sm text-secondary">per {config.creditUnit}</span>
@@ -359,7 +359,7 @@ export default function AdminCosts() {
                     <h3 className="font-semibold">Kosten per Gebruiker (Toplijst)</h3>
                 </div>
                 <table className="w-full">
-                    <thead className="bg-gray-50 dark:bg-gray-800/50 border-b border-theme">
+                    <thead className="bg-[var(--bg-app)] border-b border-theme">
                         <tr>
                             <th className="text-left px-4 py-3 font-semibold">Gebruiker</th>
                             {allAppIds.map(appId => (
@@ -381,7 +381,7 @@ export default function AdminCosts() {
                             aggregatedData.userCosts.slice(0, 50).map((userCost) => {
                                 const userProfile = users[userCost.uid] || {};
                                 return (
-                                    <tr key={userCost.uid} className="border-b border-theme last:border-0 hover:bg-gray-50 dark:hover:bg-gray-800/30">
+                                    <tr key={userCost.uid} className="border-b border-theme last:border-0 hover:bg-[var(--bg-surface-hover)]">
                                         <td className="px-4 py-3">
                                             <div>
                                                 <p className="font-medium">{userProfile.displayName || 'Onbekend'}</p>
@@ -411,7 +411,7 @@ export default function AdminCosts() {
             {/* Chart Placeholder */}
             <div className="bg-card rounded-xl border border-theme p-5">
                 <h3 className="font-semibold mb-4">Maandelijkse Trend</h3>
-                <div className="h-48 flex items-center justify-center bg-gray-100 dark:bg-gray-800 rounded-lg">
+                <div className="h-48 flex items-center justify-center bg-[var(--bg-app)] rounded-lg">
                     <div className="text-center text-secondary">
                         <span className="material-symbols-outlined text-4xl mb-2 block">show_chart</span>
                         <p className="text-sm">Historische data wordt nu verzameld.</p>
@@ -490,7 +490,7 @@ function DetailedCostBreakdown({ currentMonthKey }) {
                     {data && (
                         <div className="overflow-x-auto mt-4">
                             <table className="w-full text-sm">
-                                <thead className="bg-gray-50 dark:bg-gray-800/50 text-left border-b border-theme">
+                                <thead className="bg-[var(--bg-app)] text-left border-b border-theme">
                                     <tr>
                                         <th className="px-3 py-2">Gebruiker</th>
                                         <th className="px-3 py-2">Email</th>
@@ -499,7 +499,7 @@ function DetailedCostBreakdown({ currentMonthKey }) {
                                         <th className="px-3 py-2 text-right">Kosten</th>
                                     </tr>
                                 </thead>
-                                <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+                                <tbody className="divide-y divide-theme">
                                     {data.length === 0 ? (
                                         <tr>
                                             <td colSpan="5" className="px-3 py-4 text-center text-secondary">
@@ -512,11 +512,11 @@ function DetailedCostBreakdown({ currentMonthKey }) {
                                             const appName = config ? config.appName : row.appId;
 
                                             return (
-                                                <tr key={`${row.userId}-${row.appId}`} className="hover:bg-gray-50 dark:hover:bg-gray-800/30">
+                                                <tr key={`${row.userId}-${row.appId}`} className="hover:bg-[var(--bg-surface-hover)]">
                                                     <td className="px-3 py-2 font-mono text-xs text-secondary">{row.userId}</td>
                                                     <td className="px-3 py-2 font-medium">{row.userEmail}</td>
                                                     <td className="px-3 py-2">
-                                                        <span className="bg-blue-50 text-blue-700 px-2 py-0.5 rounded text-xs border border-blue-100 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-900">
+                                                        <span className="bg-blue-500/10 text-blue-600 dark:text-blue-400 px-2 py-0.5 rounded text-xs border border-blue-500/20">
                                                             {appName}
                                                         </span>
                                                     </td>

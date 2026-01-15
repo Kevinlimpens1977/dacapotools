@@ -300,7 +300,7 @@ export default function AdminUserDetail() {
                                                 type="number"
                                                 readOnly
                                                 value={settings.creditsRemaining}
-                                                className="w-full px-3 py-2 bg-gray-100 dark:bg-gray-800 border border-theme rounded-lg focus:outline-none text-secondary cursor-not-allowed"
+                                                className="w-full px-3 py-2 bg-[var(--input-bg)] border border-theme rounded-lg focus:outline-none text-secondary cursor-not-allowed"
                                                 title="Credits kunnen alleen via de knop hiernaast worden gewijzigd"
                                             />
                                             <button
@@ -334,7 +334,7 @@ export default function AdminUserDetail() {
 
                                 {/* Read-only Stats */}
                                 {totalGenerations !== undefined && (
-                                    <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3">
+                                    <div className="bg-[var(--bg-elev-2)] rounded-lg p-3">
                                         <span className="block text-xs text-secondary uppercase tracking-wider">Totaal Generaties</span>
                                         <span className="block text-xl font-mono font-medium">{totalGenerations}</span>
                                     </div>

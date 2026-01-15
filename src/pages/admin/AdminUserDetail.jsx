@@ -15,9 +15,9 @@
 
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { doc, getDoc, onSnapshot } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
-import { db, functions } from '../../firebase';
+import { db, functions } from '../../firebase'; // Corrected path
 import { useAuth } from '../../context/AuthContext';
 import { APP_CREDITS_CONFIG } from '../../config/appCredits';
 
@@ -26,59 +26,73 @@ export default function AdminUserDetail() {
     const navigate = useNavigate();
     const { isSupervisor } = useAuth();
 
-    // States
     const [userData, setUserData] = useState(null);
     const [appSettings, setAppSettings] = useState({});
     const [loading, setLoading] = useState(true);
-    const [saving, setSaving] = useState({}); // Map of appId -> boolean
-    const [saveSuccess, setSaveSuccess] = useState({}); // Map of appId -> boolean
+    const [saveSuccess, setSaveSuccess] = useState({});
+    const [saving, setSaving] = useState({});
 
-    // Modal State
+    // Modal state
     const [modalOpen, setModalOpen] = useState(false);
     const [modalData, setModalData] = useState({ appId: '', amount: 10, reason: '' });
     const [modalLoading, setModalLoading] = useState(false);
 
-    // Fetch user and app settings
-    const fetchData = async () => {
+    // Fetch user (Static) and App Settings (Realtime)
+    useEffect(() => {
         if (!userId) return;
 
-        try {
-            // 1. Fetch Basic User Data
-            const userRef = doc(db, 'users', userId);
-            const userSnap = await getDoc(userRef);
+        let unsubscribers = [];
 
-            if (userSnap.exists()) {
-                setUserData({ id: userSnap.id, ...userSnap.data() });
-            } else {
-                console.error('User not found');
-                navigate('/admin/users');
-                return;
-            }
+        const initData = async () => {
+            try {
+                // 1. Fetch Basic User Data (One-time fetch of global profile)
+                // We keep this static to avoid unnecessary reads, as profile doesn't change during role edits
+                const userRef = doc(db, 'users', userId);
+                const userSnap = await getDoc(userRef);
 
-            // 2. Fetch App Settings per app from central config
-            const appIds = Object.keys(APP_CREDITS_CONFIG);
-            const settings = {};
-            for (const appId of appIds) {
-                const appRef = doc(db, 'users', userId, 'apps', appId);
-                const appSnap = await getDoc(appRef);
-
-                if (appSnap.exists()) {
-                    settings[appId] = appSnap.data();
+                if (userSnap.exists()) {
+                    setUserData({ id: userSnap.id, ...userSnap.data() });
                 } else {
-                    settings[appId] = null; // Mark as not existing yet
+                    console.error('User not found');
+                    navigate('/admin/users');
+                    return;
                 }
+
+                // 2. Realtime Listeners for App Settings (Fixes stale UI after role update)
+                // Path: apps/{appId}/users/{uid}
+                const appIds = Object.keys(APP_CREDITS_CONFIG);
+
+                appIds.forEach(appId => {
+                    const appUserRef = doc(db, 'apps', appId, 'users', userId);
+
+                    const unsub = onSnapshot(appUserRef, (docSnap) => {
+                        const data = docSnap.exists() ? docSnap.data() : null;
+
+                        setAppSettings(prev => ({
+                            ...prev,
+                            [appId]: data
+                        }));
+                    }, (error) => {
+                        console.warn(`[Realtime] Failed to listen to ${appId}:`, error);
+                    });
+
+                    unsubscribers.push(unsub);
+                });
+
+                setLoading(false);
+
+            } catch (error) {
+                console.error('Error initializing details:', error);
+                setLoading(false);
             }
-            setAppSettings(settings);
+        };
 
-        } catch (error) {
-            console.error('Error fetching details:', error);
-        } finally {
-            setLoading(false);
-        }
-    };
+        initData();
 
-    useEffect(() => {
-        fetchData();
+        // Cleanup listeners
+        return () => {
+            unsubscribers.forEach(unsub => unsub());
+        };
     }, [userId, navigate]);
 
     // Handle form changes for apps
@@ -100,25 +114,21 @@ export default function AdminUserDetail() {
         setSaveSuccess(prev => ({ ...prev, [appId]: false }));
 
         try {
-            const appRef = doc(db, 'users', userId, 'apps', appId);
             const currentSettings = appSettings[appId] || {};
+            const newRole = currentSettings.role || 'user';
 
-            // Build payload - only include allowed fields
-            // SECURITY: Credits are explicitly EXCLUDED from this write
-            const payload = {
-                role: currentSettings.role || 'user'
-            };
-
-            // Write to users/{uid}/apps/{appId} with merge
-            await setDoc(appRef, payload, { merge: true });
+            // Call Cloud Function to update role
+            const setAppRole = httpsCallable(functions, 'setAppRole');
+            await setAppRole({
+                targetUid: userId,
+                appId: appId,
+                role: newRole
+            });
 
             // Re-fetch to sync state
-            const updatedSnap = await getDoc(appRef);
-            setAppSettings(prev => ({
-                ...prev,
-                [appId]: updatedSnap.data()
-            }));
-
+            // For now, assume it succeeded and update local state to reflect 'saved'
+            // The Cloud Function update is eventual consistent, so we might not see it immediately in a getDoc
+            // but for UI feedback we assume success if no error thrown.
             setSaveSuccess(prev => ({ ...prev, [appId]: true }));
 
             // Clear success after 3 seconds
@@ -128,7 +138,7 @@ export default function AdminUserDetail() {
 
         } catch (error) {
             console.error(`Error saving ${appId}:`, error);
-            alert('Er is een fout opgetreden bij het opslaan.');
+            alert(`Er is een fout opgetreden: ${error.message}`);
         } finally {
             setSaving(prev => ({ ...prev, [appId]: false }));
         }
@@ -149,7 +159,7 @@ export default function AdminUserDetail() {
             const adminAdjustCredits = httpsCallable(functions, 'adminAdjustCredits');
 
             const result = await adminAdjustCredits({
-                targetUserId: userId,
+                uid: userId,
                 appId: modalData.appId,
                 amount: parseInt(modalData.amount, 10),
                 reason: modalData.reason
@@ -158,8 +168,8 @@ export default function AdminUserDetail() {
             if (result.data.success) {
                 // Close modal
                 setModalOpen(false);
-                // Refresh data to show new credits
-                await fetchData();
+                // Data updates via realtime listener
+                // await fetchData();
                 alert(`Succesvol ${result.data.delta} credits toegevoegd.`);
             }
         } catch (error) {

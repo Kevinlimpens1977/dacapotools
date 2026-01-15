@@ -7,12 +7,30 @@
 - Vergelijk project ↔ canon
 - Detecteer alle afwijkingen in:
   - UX/UI (tokens, componenten, layout)
+  - **COLOR SYSTEM (LOCKED):**
+    - MUST match `dacapo-master-template-v1.0.md` Section A.1 EXACTLY.
+    - No independent palettes.
+    - No Tailwind utility colors.
   - Navigatie
   - Datamodel
   - Rollen & rechten
   - Creditsysteem
   - Backend logica
   - Security rules
+  - **AUTH & LOGIN (STRICT):**
+    - [ ] Fullscreen BG with **Safe Margins** (inner padded canvas)
+    - [ ] **Float Depth:** Halo/Backplate (`inset -18px`) + Deep Shadow (`30px/80px`)
+    - [ ] **Vertical Safe Zone:** Card **never** overlaps headline (`pt clamp`)
+    - [ ] **Position:** Right aligned via flex + `pr clamp(12px, 1.5vw, 24px)`
+    - [ ] Split Email Input UX
+    - [ ] Canonieke Teksten correct
+  - **DARK MODE (STRICT):**
+    - [ ] **Tokens:** Defined in `body.dark` (no hardcoded colors)
+    - [ ] **Inputs:** Never white in dark mode (`var(--input-bg)`)
+    - [ ] **Cards:** Use `bg-card` / `var(--bg-elev-2)`
+    - [ ] **Text:** Contrast checked (92% white on dark)
+    - [ ] **Icons:** Visible (currentColor or muted -> primary)
+    - [ ] **Light Mode:** PRESERVED (Pixel-identical)
 
 ---
 
@@ -103,6 +121,8 @@ De agent mag **NOOIT**:
 - Creatieve verbeteringen doen
 - “Betere alternatieven” suggereren
 - Supabase laten bestaan “tijdelijk”
+- **Het kleurensysteem herinterpreteren, regenereren of wijzigen (LOCKED)**
+- Eigen 'dark mode' varianten verzinnen (gebruik master tokens)
 
 ---
 

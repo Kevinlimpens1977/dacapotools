@@ -2,12 +2,10 @@ import { useState, useRef } from 'react';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import { Link } from 'react-router-dom';
-import LoginModal from './LoginModal';
 
 export default function Header({ labels, selectedLabels, onToggleLabel, searchQuery, onSearchChange }) {
     const { isDarkMode, toggleTheme } = useTheme();
     const { user, userData, userRole, signOut } = useAuth();
-    const [showLoginModal, setShowLoginModal] = useState(false);
     const scrollContainerRef = useRef(null);
 
     const handleClear = () => onToggleLabel(null);
@@ -132,57 +130,41 @@ export default function Header({ labels, selectedLabels, onToggleLabel, searchQu
                             </Link>
                         )}
 
-                        {/* Profile / Login */}
-                        {user ? (
-                            <div className="relative group">
-                                <button className="size-9 rounded-full bg-[#2860E0] flex items-center justify-center text-white font-semibold text-sm border border-theme shadow-sm overflow-hidden">
-                                    {user.photoURL ? (
-                                        <img
-                                            src={user.photoURL}
-                                            alt={user.displayName || 'Profiel'}
-                                            className="w-full h-full object-cover"
-                                        />
-                                    ) : (
-                                        <span>
-                                            {(userData?.displayName || user.email || '?').charAt(0).toUpperCase()}
-                                        </span>
-                                    )}
-                                </button>
-                                {/* Dropdown */}
-                                <div className="absolute right-0 mt-2 w-48 max-w-[90vw] bg-card border border-theme rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 overflow-hidden">
-                                    <div className="p-3 border-b border-theme">
-                                        <p className="font-medium truncate">
-                                            {userData?.displayName || user.displayName || user.email?.split('@')[0]}
-                                        </p>
-                                        <p className="text-sm text-secondary truncate">{user.email}</p>
-                                    </div>
-                                    <button
-                                        onClick={signOut}
-                                        className="w-full px-3 py-2 text-left hover:bg-[var(--bg-surface-hover)] transition-colors flex items-center gap-2"
-                                    >
-                                        <span className="material-symbols-outlined text-xl">logout</span>
-                                        Uitloggen
-                                    </button>
-                                </div>
-                            </div>
-                        ) : (
-                            <button
-                                onClick={() => setShowLoginModal(true)}
-                                className="flex items-center justify-center size-9 rounded-full bg-[#2860E0] text-white hover:bg-[#1C4DAB] transition-colors shadow-sm"
-                                aria-label="Inloggen"
-                            >
-                                <span className="material-symbols-outlined text-xl">login</span>
+                        {/* Profile (Auth guaranteed by AuthGate) */}
+                        <div className="relative group">
+                            <button className="size-9 rounded-full bg-[#2860E0] flex items-center justify-center text-white font-semibold text-sm border border-theme shadow-sm overflow-hidden">
+                                {user?.photoURL ? (
+                                    <img
+                                        src={user.photoURL}
+                                        alt={user.displayName || 'Profiel'}
+                                        className="w-full h-full object-cover"
+                                    />
+                                ) : (
+                                    <span>
+                                        {(userData?.displayName || user?.email || '?').charAt(0).toUpperCase()}
+                                    </span>
+                                )}
                             </button>
-                        )}
+                            {/* Dropdown */}
+                            <div className="absolute right-0 mt-2 w-48 max-w-[90vw] bg-card border border-theme rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 overflow-hidden">
+                                <div className="p-3 border-b border-theme">
+                                    <p className="font-medium truncate">
+                                        {userData?.displayName || user?.displayName || user?.email?.split('@')[0]}
+                                    </p>
+                                    <p className="text-sm text-secondary truncate">{user?.email}</p>
+                                </div>
+                                <button
+                                    onClick={signOut}
+                                    className="w-full px-3 py-2 text-left hover:bg-[var(--bg-surface-hover)] transition-colors flex items-center gap-2"
+                                >
+                                    <span className="material-symbols-outlined text-xl">logout</span>
+                                    Uitloggen
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </header>
-
-            {/* Login Modal */}
-            <LoginModal
-                isOpen={showLoginModal}
-                onClose={() => setShowLoginModal(false)}
-            />
         </>
     );
 }

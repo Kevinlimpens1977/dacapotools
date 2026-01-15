@@ -87,7 +87,7 @@ export default function AdminCredits() {
                 <p className="text-secondary mt-1">
                     Overzicht van platformkosten per app ({currentMonthKey})
                 </p>
-                <div className="text-xs text-green-600 bg-green-50 dark:bg-green-900/20 px-2 py-1 rounded inline-block mt-2">
+                <div className="text-xs text-green-600 bg-green-500/10 px-2 py-1 rounded inline-block mt-2">
                     <span className="material-symbols-outlined text-sm align-middle mr-1">cloud_done</span>
                     Live data via Cloud Functions
                 </div>
@@ -113,7 +113,7 @@ export default function AdminCredits() {
                         const costs = appCosts[appId] || { totalUsage: 0, totalCost: 0 };
 
                         return (
-                            <div key={appId} className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
+                            <div key={appId} className="flex items-center justify-between p-4 bg-[var(--bg-app)] rounded-lg">
                                 <div className="flex items-center gap-4">
                                     <div className="size-12 rounded-lg bg-[#2860E0]/10 flex items-center justify-center">
                                         <span className="material-symbols-outlined text-[#2860E0]">

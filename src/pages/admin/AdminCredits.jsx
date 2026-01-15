@@ -1,173 +1,298 @@
 /**
  * AdminCredits Page
  * 
- * Displays LIVE monthly cost data for all apps.
- * Data source: getCostsSummary Cloud Function (ONLY)
+ * CREDIT MANAGEMENT INTERFACE
  * 
- * CANONICAL RULES:
- * - NO Firestore imports
- * - NO client-side cost calculation
- * - Read-only for Admin & MT
+ * Role-aware interface for managing user credits per app.
+ * - Supervisor: View & Edit (inline)
+ * - Administrator: Read-only
+ * 
+ * Data Source: apps/{appId}/users/{uid}
+ * Mutations: adminAdjustCredits (Cloud Function)
  */
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { collection, getDocs, query, orderBy } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
-import { functions } from '../../firebase';
+import { db, functions } from '../../firebase';
 import { useAuth } from '../../context/AuthContext';
 import { APP_CREDITS_CONFIG, getAllAppIds } from '../../config/appCredits';
+import { useTheme } from '../../context/ThemeContext';
 
 export default function AdminCredits() {
-    const { isSupervisor } = useAuth();
+    const { isSupervisor, userRole } = useAuth();
+    const { isDarkMode } = useTheme();
 
-    // Live costs per app: { [appId]: { totalUsage, totalCost, monthKey } }
-    const [appCosts, setAppCosts] = useState({});
-    const [loading, setLoading] = useState(true);
+    // 1. App Selector
+    // Filter apps that actually use credits
+    const creditApps = getAllAppIds().filter(id => APP_CREDITS_CONFIG[id]?.hasCredits);
+    const [selectedAppId, setSelectedAppId] = useState('');
 
-    const allAppIds = getAllAppIds();
-    const getCostsSummary = httpsCallable(functions, 'getCostsSummary');
+    // 2. User List
+    const [users, setUsers] = useState([]);
+    const [loading, setLoading] = useState(false);
+    const [refreshTrigger, setRefreshTrigger] = useState(0);
 
-    // Current month key for display
-    const currentMonthKey = useMemo(() => {
-        const now = new Date();
-        const year = now.getFullYear();
-        const month = String(now.getMonth() + 1).padStart(2, '0');
-        return `${year}-${month}`;
-    }, []);
+    // 3. Inline Editing State
+    const [editingUserId, setEditingUserId] = useState(null);
+    const [editValue, setEditValue] = useState('');
+    const [saving, setSaving] = useState(false);
 
-    // Fetch LIVE costs for each app via Cloud Function
+    // 4. Success Toast State
+    const [successUserId, setSuccessUserId] = useState(null);
+
+    const inputRef = useRef(null);
+
+    // Fetch users when app is selected
     useEffect(() => {
-        const fetchAllCosts = async () => {
+        if (!selectedAppId) {
+            setUsers([]);
+            return;
+        }
+
+        const fetchUsers = async () => {
             setLoading(true);
-            const costsMap = {};
+            try {
+                // Fetch ALL users for the selected app
+                // Path: apps/{appId}/users
+                const usersRef = collection(db, 'apps', selectedAppId, 'users');
+                // Order by credits desc for utility
+                const q = query(usersRef); // removed orderBy('credits', 'desc') to avoid potential index errors if index missing
 
-            // Fetch costs for each app in parallel
-            const promises = allAppIds.map(async (appId) => {
-                try {
-                    const res = await getCostsSummary({ appId });
-                    costsMap[appId] = {
-                        totalUsage: res.data?.totalUsage ?? 0,
-                        totalCost: res.data?.totalCost ?? 0,
-                        monthKey: res.data?.monthKey ?? currentMonthKey
-                    };
-                } catch (err) {
-                    console.error(`Failed to fetch costs for ${appId}:`, err);
-                    costsMap[appId] = { totalUsage: 0, totalCost: 0, monthKey: currentMonthKey };
-                }
-            });
+                const snapshot = await getDocs(q);
 
-            await Promise.all(promises);
-            setAppCosts(costsMap);
-            setLoading(false);
+                const fetchedUsers = snapshot.docs.map(doc => ({
+                    uid: doc.id,
+                    ...doc.data()
+                }));
+
+                // Sort client-side to be safe
+                fetchedUsers.sort((a, b) => (b.credits || 0) - (a.credits || 0));
+
+                setUsers(fetchedUsers);
+            } catch (error) {
+                console.error("Error fetching users:", error);
+                alert("Fout bij ophalen gebruikers. Controleer je rechten.");
+            } finally {
+                setLoading(false);
+            }
         };
 
-        fetchAllCosts();
-    }, [currentMonthKey]);
+        fetchUsers();
+    }, [selectedAppId, refreshTrigger]);
 
-    // Calculate grand total from all app costs
-    const grandTotal = Object.values(appCosts).reduce(
-        (sum, app) => sum + (app.totalCost || 0),
-        0
-    );
+    // Focus input when editing starts
+    useEffect(() => {
+        if (editingUserId && inputRef.current) {
+            inputRef.current.focus();
+            inputRef.current.select();
+        }
+    }, [editingUserId]);
 
-    if (loading) {
-        return (
-            <div className="flex items-content justify-center py-12">
-                <div className="text-center">
-                    <span className="material-symbols-outlined text-4xl animate-spin text-[#2860E0]">
-                        sync
-                    </span>
-                    <p className="text-secondary mt-2 text-sm">Kosten laden...</p>
-                </div>
-            </div>
-        );
-    }
+    // Handle Edit Click
+    const handleEditClick = (user) => {
+        if (!isSupervisor) return;
+        setEditingUserId(user.uid);
+        setEditValue(String(user.credits || 0));
+    };
+
+    // Handle Cancel
+    const handleCancel = () => {
+        setEditingUserId(null);
+        setEditValue('');
+        setSaving(false);
+    };
+
+    // Handle Save
+    const handleSave = async (user) => {
+        const newValue = parseInt(editValue, 10);
+        const oldValue = user.credits || 0;
+
+        if (isNaN(newValue)) return;
+        if (newValue === oldValue) {
+            handleCancel();
+            return;
+        }
+
+        setSaving(true);
+        // Delta logic removed; sending absolute value
+
+        try {
+            const adminAdjustCredits = httpsCallable(functions, 'adminAdjustCredits');
+
+            // Call Cloud Function to update credits with absolute value
+            await adminAdjustCredits({
+                appId: selectedAppId,
+                uid: user.uid,
+                credits: newValue
+            });
+
+            // Success
+            setRefreshTrigger(prev => prev + 1); // Trigger refetch
+            setSuccessUserId(user.uid);
+            handleCancel();
+
+        } catch (error) {
+            console.error("Error updating credits:", error);
+            alert(`Fout bij updaten: ${error.message}`);
+            setSaving(false);
+        }
+    };
+
+    // Handle Key Press (Enter/Esc)
+    const handleKeyDown = (e, user) => {
+        if (e.key === 'Enter') {
+            handleSave(user);
+        } else if (e.key === 'Escape') {
+            handleCancel();
+        }
+    };
 
     return (
         <div className="space-y-6 max-w-7xl">
             {/* Header */}
-            <div className="flex items-center justify-between">
-                <div>
-                    <h2 className="text-2xl font-bold">Kosten</h2>
-                    <p className="text-secondary mt-1">
-                        Overzicht van platformkosten per app ({currentMonthKey})
-                    </p>
-                </div>
-                {/* Role indicator */}
-                <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium ${isSupervisor
-                    ? 'bg-purple-500/10 text-purple-600 dark:text-purple-400'
-                    : 'bg-blue-500/10 text-blue-600 dark:text-blue-400'
-                    }`}>
-                    <span className="material-symbols-outlined text-sm">
-                        visibility
+            <div>
+                <h2 className="text-2xl font-bold">Credit Management</h2>
+                <p className="text-secondary mt-1">
+                    Beheer gebruikerscredits per applicatie.
+                </p>
+                {/* Role Indicator */}
+                <div className="mt-2 text-xs">
+                    Rol: <span className={`font-semibold ${isSupervisor ? 'text-purple-600' : 'text-blue-600'}`}>
+                        {isSupervisor ? 'Supervisor (Read/Write)' : 'Administrator (Read-Only)'}
                     </span>
-                    Alleen-lezen
                 </div>
             </div>
 
-            {/* Live data indicator */}
-            <div className="text-xs text-green-600 bg-green-50 dark:bg-green-900/20 px-2 py-1 rounded inline-block">
-                <span className="material-symbols-outlined text-sm align-middle mr-1">cloud_done</span>
-                Live data via Cloud Functions
-            </div>
-
-            {/* Total Cost Card */}
-            <div className="bg-gradient-to-br from-[#2860E0] to-[#1C4DAB] rounded-xl p-6 text-white">
-                <p className="text-white/70 text-sm">Totale Kosten Deze Maand</p>
-                <p className="text-4xl font-bold mt-2">
-                    €{grandTotal.toFixed(2)}
-                </p>
-                <p className="text-white/70 text-sm mt-2">
-                    Gebaseerd op server-side aggregatie
-                </p>
-            </div>
-
-            {/* Cost per App */}
+            {/* 1. App Selector */}
             <div className="bg-card rounded-xl border border-theme p-5">
-                <h3 className="font-semibold mb-4">Kosten per App</h3>
-                <div className="space-y-4">
-                    {allAppIds.map(appId => {
-                        const config = APP_CREDITS_CONFIG[appId];
-                        const costs = appCosts[appId] || { totalUsage: 0, totalCost: 0 };
+                <label className="block text-sm font-medium mb-2">Selecteer App</label>
+                <select
+                    value={selectedAppId}
+                    onChange={(e) => setSelectedAppId(e.target.value)}
+                    className="w-full md:w-1/3 px-3 py-2 rounded-lg border border-theme bg-[var(--input-bg)] focus:ring-2 focus:ring-[#2860E0] outline-none transition-all"
+                    style={{ colorScheme: isDarkMode ? 'dark' : 'light' }}
+                >
+                    <option value="">-- Kies een app --</option>
+                    {creditApps.map(appId => (
+                        <option key={appId} value={appId}>
+                            {APP_CREDITS_CONFIG[appId].appName}
+                        </option>
+                    ))}
+                </select>
+                {!selectedAppId && (
+                    <p className="text-sm text-secondary mt-2">
+                        Selecteer een app om gebruikers en credits te laden.
+                    </p>
+                )}
+            </div>
 
-                        return (
-                            <div key={appId} className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
-                                <div className="flex items-center gap-4">
-                                    <div className="size-12 rounded-lg bg-[#2860E0]/10 flex items-center justify-center">
-                                        <span className="material-symbols-outlined text-[#2860E0]">
-                                            {appId === 'paco' ? 'image' : appId === 'translate' ? 'translate' : 'apps'}
-                                        </span>
-                                    </div>
-                                    <div>
-                                        <p className="font-medium">{config.appName}</p>
-                                        <p className="text-sm text-secondary">
-                                            {costs.totalUsage} {config.creditUnitPlural || 'acties'} verbruikt
-                                        </p>
-                                    </div>
-                                </div>
-                                <div className="text-right">
-                                    <p className="text-xl font-bold">
-                                        €{(costs.totalCost || 0).toFixed(2)}
-                                    </p>
-                                    {config.hasCredits && (
-                                        <p className="text-xs text-secondary">
-                                            Limiet: {config.monthlyLimit} {config.creditUnitPlural}/maand
-                                        </p>
-                                    )}
-                                </div>
-                            </div>
-                        );
-                    })}
+            {/* 2. User List */}
+            {selectedAppId && (
+                <div className="bg-card rounded-xl border border-theme overflow-hidden">
+                    {loading ? (
+                        <div className="flex items-center justify-center py-12">
+                            <span className="material-symbols-outlined text-4xl animate-spin text-[#2860E0]">
+                                sync
+                            </span>
+                        </div>
+                    ) : users.length === 0 ? (
+                        <div className="p-8 text-center text-secondary">
+                            <span className="material-symbols-outlined text-4xl mb-2">group_off</span>
+                            <p>Geen gebruikers gevonden voor deze app.</p>
+                        </div>
+                    ) : (
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-left border-collapse">
+                                <thead className="bg-[#2860E0]/5 text-xs uppercase text-secondary font-semibold">
+                                    <tr>
+                                        <th className="px-6 py-4">Naam</th>
+                                        <th className="px-6 py-4">Email</th>
+                                        <th className="px-6 py-4 text-right">Credits</th>
+                                        {isSupervisor && <th className="px-6 py-4 w-12"></th>}
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-theme">
+                                    {users.map(user => (
+                                        <tr key={user.uid} className="hover:bg-[var(--bg-surface-hover)] transition-colors">
+                                            {/* Name */}
+                                            <td className="px-6 py-4 font-medium text-primary">
+                                                {user.displayName || 'Naamloos'}
+                                            </td>
+
+                                            {/* Email */}
+                                            <td className="px-6 py-4 text-sm text-secondary">
+                                                {user.email || 'Geen email'}
+                                            </td>
+
+                                            {/* Credits (Editable for Supervisor) */}
+                                            <td className="px-6 py-4 text-right relative">
+                                                {editingUserId === user.uid ? (
+                                                    <div className="absolute right-4 top-1/2 -translate-y-1/2 z-10 flex items-center gap-1 bg-card border border-theme shadow-xl rounded-lg p-1 animate-in zoom-in-95 duration-200">
+                                                        <input
+                                                            ref={inputRef}
+                                                            type="number"
+                                                            value={editValue}
+                                                            onChange={(e) => setEditValue(e.target.value)}
+                                                            onKeyDown={(e) => handleKeyDown(e, user)}
+                                                            className="w-20 px-2 py-1 text-right bg-[var(--input-bg)] rounded border border-theme outline-none focus:border-[#2860E0]"
+                                                            disabled={saving}
+                                                        />
+                                                        <button
+                                                            onClick={() => handleSave(user)}
+                                                            disabled={saving}
+                                                            className="p-1 hover:bg-green-500/10 text-green-500 rounded transition-colors"
+                                                            title="Opslaan"
+                                                        >
+                                                            {saving ? (
+                                                                <span className="material-symbols-outlined text-lg animate-spin">sync</span>
+                                                            ) : (
+                                                                <span className="material-symbols-outlined text-lg">check</span>
+                                                            )}
+                                                        </button>
+                                                        <button
+                                                            onClick={handleCancel}
+                                                            disabled={saving}
+                                                            className="p-1 hover:bg-red-500/10 text-red-500 rounded transition-colors"
+                                                            title="Annuleren"
+                                                        >
+                                                            <span className="material-symbols-outlined text-lg">close</span>
+                                                        </button>
+                                                    </div>
+                                                ) : (successUserId && successUserId === user.uid) ? (
+                                                    <div className="absolute right-6 top-1/2 -translate-y-1/2 z-10 flex items-center gap-1.5 px-3 py-1.5 bg-green-500/10 text-green-600 dark:text-green-400 rounded-lg animate-in fade-in zoom-in-95 duration-300">
+                                                        <span className="material-symbols-outlined text-sm">check_circle</span>
+                                                        <span className="text-xs font-bold">Opgeslagen</span>
+                                                    </div>
+                                                ) : (
+                                                    <div className="font-mono font-medium text-lg">
+                                                        {typeof user.credits === 'number' ? user.credits : '-'}
+                                                    </div>
+                                                )}
+                                            </td>
+
+                                            {/* Edit Action (Supervisor Only) */}
+                                            {isSupervisor && (
+                                                <td className="px-6 py-4 text-right">
+                                                    {editingUserId !== user.uid && (
+                                                        <button
+                                                            onClick={() => handleEditClick(user)}
+                                                            className="text-secondary hover:text-[#2860E0] p-1 rounded hover:bg-[#2860E0]/10 transition-colors"
+                                                            title="Bewerk credits"
+                                                        >
+                                                            <span className="material-symbols-outlined text-lg">edit</span>
+                                                        </button>
+                                                    )}
+                                                </td>
+                                            )}
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
                 </div>
-            </div>
-
-            {/* Info Note */}
-            <div className="flex items-center gap-3 p-4 bg-blue-500/10 rounded-lg text-blue-600 dark:text-blue-400">
-                <span className="material-symbols-outlined">info</span>
-                <p className="text-sm">
-                    Kosten worden automatisch berekend door Cloud Functions.
-                    Data is read-only voor administrators.
-                </p>
-            </div>
+            )}
         </div>
     );
 }

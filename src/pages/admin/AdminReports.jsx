@@ -86,7 +86,7 @@ export default function AdminReports() {
                         <select
                             value={selectedMonth}
                             onChange={(e) => setSelectedMonth(e.target.value)}
-                            className="w-full px-3 py-2 rounded-lg border border-theme bg-white dark:bg-gray-800"
+                            className="w-full px-3 py-2 rounded-lg border border-theme bg-[var(--input-bg)]"
                         >
                             {months.map(month => (
                                 <option key={month.value} value={month.value}>
@@ -102,7 +102,7 @@ export default function AdminReports() {
                         <select
                             value={selectedApp}
                             onChange={(e) => setSelectedApp(e.target.value)}
-                            className="w-full px-3 py-2 rounded-lg border border-theme bg-white dark:bg-gray-800"
+                            className="w-full px-3 py-2 rounded-lg border border-theme bg-[var(--input-bg)]"
                         >
                             <option value="all">Alle Apps</option>
                             {allAppIds.map(appId => (
@@ -136,19 +136,19 @@ export default function AdminReports() {
 
                 {/* Summary Cards */}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-                    <div className="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
+                    <div className="p-4 bg-[var(--bg-app)] rounded-lg">
                         <p className="text-sm text-secondary">Actieve Gebruikers</p>
                         <p className="text-2xl font-bold mt-1">{reportData.activeUsers}</p>
                     </div>
-                    <div className="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
+                    <div className="p-4 bg-[var(--bg-app)] rounded-lg">
                         <p className="text-sm text-secondary">Credits Gebruikt</p>
                         <p className="text-2xl font-bold mt-1">{reportData.totalCreditsUsed}</p>
                     </div>
-                    <div className="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
+                    <div className="p-4 bg-[var(--bg-app)] rounded-lg">
                         <p className="text-sm text-secondary">Totale Kosten</p>
                         <p className="text-2xl font-bold mt-1">€{reportData.totalCosts.toFixed(2)}</p>
                     </div>
-                    <div className="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
+                    <div className="p-4 bg-[var(--bg-app)] rounded-lg">
                         <p className="text-sm text-secondary">Aantal Tools</p>
                         <p className="text-2xl font-bold mt-1">{tools.length}</p>
                     </div>
@@ -161,7 +161,7 @@ export default function AdminReports() {
                         {reportData.apps.map(app => (
                             <div
                                 key={app.appId}
-                                className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg"
+                                className="flex items-center justify-between p-3 bg-[var(--bg-app)] rounded-lg"
                             >
                                 <span className="font-medium">{app.name}</span>
                                 <div className="flex items-center gap-6 text-sm">
@@ -215,7 +215,7 @@ export default function AdminReports() {
                     <button
                         onClick={() => handleExport('csv')}
                         disabled={exporting === 'csv'}
-                        className="inline-flex items-center gap-2 px-6 py-3 border border-theme rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors disabled:opacity-50"
+                        className="inline-flex items-center gap-2 px-6 py-3 border border-theme rounded-lg bg-[var(--bg-surface-hover)] hover:bg-[var(--bg-elev-2)] text-primary transition-colors hover:border-[#2860E0] disabled:opacity-50"
                     >
                         {exporting === 'csv' ? (
                             <span className="material-symbols-outlined text-xl animate-spin">sync</span>

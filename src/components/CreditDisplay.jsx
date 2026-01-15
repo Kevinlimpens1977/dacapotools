@@ -106,7 +106,7 @@ export default function CreditDisplay({ appId, compact = false, className = '' }
             <div className="h-2 bg-gray-200 dark:bg-gray-600 rounded-full overflow-hidden mb-3">
                 <div
                     className={`h-full transition-all duration-300 ${hasNoCredits ? 'bg-red-500' :
-                            isLowCredits ? 'bg-yellow-500' : 'bg-green-500'
+                        isLowCredits ? 'bg-yellow-500' : 'bg-green-500'
                         }`}
                     style={{ width: `${Math.min(100, (creditsRemaining / monthlyLimit) * 100)}%` }}
                 />

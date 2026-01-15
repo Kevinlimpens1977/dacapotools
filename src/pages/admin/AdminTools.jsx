@@ -95,13 +95,13 @@ export default function AdminTools() {
                         onClick={() => setFilter(tab.key)}
                         className={`px-4 py-2 rounded-lg font-medium transition-colors ${filter === tab.key
                             ? 'bg-[#2860E0] text-white'
-                            : 'bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700'
+                            : 'bg-[var(--bg-surface-hover)] hover:bg-[var(--bg-elev-2)]'
                             }`}
                     >
                         {tab.label}
                         <span className={`ml-2 px-2 py-0.5 rounded-full text-xs ${filter === tab.key
                             ? 'bg-white/20'
-                            : 'bg-gray-200 dark:bg-gray-700'
+                            : 'bg-[var(--bg-app)]'
                             }`}>
                             {tab.count}
                         </span>
@@ -112,7 +112,7 @@ export default function AdminTools() {
             {/* Tools Table */}
             <div className="bg-card rounded-xl border border-theme overflow-x-auto">
                 <table className="w-full">
-                    <thead className="bg-gray-50 dark:bg-gray-800/50 border-b border-theme">
+                    <thead className="bg-[var(--bg-app)] border-b border-theme">
                         <tr>
                             <th className="text-left px-4 py-3 font-semibold">Tool</th>
                             <th className="text-left px-4 py-3 font-semibold">Status</th>
@@ -136,11 +136,11 @@ export default function AdminTools() {
                             </tr>
                         ) : (
                             filteredTools.map((tool) => (
-                                <tr key={tool.id} className="border-b border-theme last:border-0 hover:bg-gray-50 dark:hover:bg-gray-800/30">
+                                <tr key={tool.id} className="border-b border-theme last:border-0 hover:bg-[var(--bg-surface-hover)]">
                                     <td className="px-4 py-3">
                                         <div className="flex items-center gap-3">
                                             <div
-                                                className="size-12 rounded-lg bg-cover bg-center border border-theme bg-gray-100 dark:bg-gray-700 flex items-center justify-center shrink-0"
+                                                className="size-12 rounded-lg bg-cover bg-center border border-theme bg-[var(--bg-app)] flex items-center justify-center shrink-0"
                                                 style={tool.imageUrl ? { backgroundImage: `url('${tool.imageUrl}')` } : {}}
                                             >
                                                 {!tool.imageUrl && (
@@ -190,7 +190,7 @@ export default function AdminTools() {
                                                 </span>
                                             ))}
                                             {tool.labels?.length > 3 && (
-                                                <span className="px-2 py-0.5 text-xs rounded-full bg-gray-200 dark:bg-gray-700">
+                                                <span className="px-2 py-0.5 text-xs rounded-full bg-[var(--bg-surface-hover)]">
                                                     +{tool.labels.length - 3}
                                                 </span>
                                             )}

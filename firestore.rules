@@ -133,8 +133,26 @@ service cloud.firestore {
            - platform admin
          - Write: BLOCKED (Cloud Functions only)
       --------------------------- */
+      /* ---------------------------
+         APP USERS (ROLES + CREDITS)
+         - Read:
+           - owner (own doc)
+           - supervisor (global list)
+           - app admin (all in app) [role=administrator OR admin]
+           - platform admin
+         - Write: BLOCKED (Cloud Functions only)
+      --------------------------- */
       match /users/{userId} {
-        allow read: if isOwner(userId) || isAppAdmin(appId) || isPlatformAdmin();
+        allow read: if
+          isOwner(userId) ||
+          isSupervisor() ||
+          isPlatformAdmin() ||
+          (
+            isAuthenticated() &&
+            exists(/databases/$(database)/documents/apps/$(appId)/users/$(request.auth.uid)) &&
+            get(/databases/$(database)/documents/apps/$(appId)/users/$(request.auth.uid)).data.role in ['administrator', 'admin']
+          );
+
         allow create, update, delete: if false;
 
         /* ---------------------------

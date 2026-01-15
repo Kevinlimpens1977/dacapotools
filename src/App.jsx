@@ -92,7 +92,7 @@ export default function App() {
                 <Route path="costs" element={<Suspense fallback={<AdminLoadingFallback />}><AdminCosts /></Suspense>} />
                 <Route path="labels" element={<Suspense fallback={<AdminLoadingFallback />}><AdminLabels /></Suspense>} />
                 <Route path="reports" element={<Suspense fallback={<AdminLoadingFallback />}><AdminReports /></Suspense>} />
-                <Route path="analytics/nieuwsbrief" element={<Suspense fallback={<AdminLoadingFallback />}><AdminNewsletterAnalytics /></Suspense>} />
+                <Route path="newsletter-analytics" element={<Suspense fallback={<AdminLoadingFallback />}><AdminNewsletterAnalytics /></Suspense>} />
               </Route>
             </Routes>
           </AuthGate>

@@ -47,7 +47,7 @@ const menuItems = [
     },
     {
         label: 'Nieuwsbrief Analytics',
-        path: '/admin/analytics/nieuwsbrief',
+        path: '/admin/newsletter-analytics',
         icon: 'mail'
     }
 ];
@@ -99,7 +99,7 @@ export default function AdminSidebar() {
                             flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors
                             ${isActive
                                 ? 'bg-primary text-white'
-                                : 'text-primary hover:bg-[var(--bg-surface-hover)]'
+                                : 'text-primary dark:text-[var(--text-secondary)] hover:bg-[var(--bg-surface-hover)] dark:hover:text-[var(--text-primary)]'
                             }
                         `}
                     >
@@ -114,7 +114,7 @@ export default function AdminSidebar() {
             {/* User Info */}
             <div className="p-4 border-t border-theme">
                 <div className="flex items-center gap-3">
-                    <div className="size-9 rounded-full bg-[#2860E0] flex items-center justify-center text-white text-sm font-medium">
+                    <div className="size-9 rounded-full bg-[var(--primary)] flex items-center justify-center text-white text-sm font-medium">
                         {(userData?.displayName || userData?.email || '?').charAt(0).toUpperCase()}
                     </div>
                     <div className="flex-1 min-w-0">

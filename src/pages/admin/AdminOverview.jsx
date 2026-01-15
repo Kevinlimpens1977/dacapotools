@@ -104,7 +104,7 @@ export default function AdminOverview() {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div className="bg-card rounded-xl border border-theme p-5">
                     <div className="flex items-center gap-3">
-                        <div className="size-12 rounded-lg bg-blue-500/10 flex items-center justify-center">
+                        <div className="size-12 rounded-lg bg-blue-500/10 border border-blue-500/20 flex items-center justify-center">
                             <span className="material-symbols-outlined text-blue-500">construction</span>
                         </div>
                         <div>
@@ -116,7 +116,7 @@ export default function AdminOverview() {
 
                 <div className="bg-card rounded-xl border border-theme p-5">
                     <div className="flex items-center gap-3">
-                        <div className="size-12 rounded-lg bg-green-500/10 flex items-center justify-center">
+                        <div className="size-12 rounded-lg bg-green-500/10 border border-green-500/20 flex items-center justify-center">
                             <span className="material-symbols-outlined text-green-500">check_circle</span>
                         </div>
                         <div>
@@ -128,7 +128,7 @@ export default function AdminOverview() {
 
                 <div className="bg-card rounded-xl border border-theme p-5">
                     <div className="flex items-center gap-3">
-                        <div className="size-12 rounded-lg bg-purple-500/10 flex items-center justify-center">
+                        <div className="size-12 rounded-lg bg-purple-500/10 border border-purple-500/20 flex items-center justify-center">
                             <span className="material-symbols-outlined text-purple-500">touch_app</span>
                         </div>
                         <div>
@@ -140,7 +140,7 @@ export default function AdminOverview() {
 
                 <div className="bg-card rounded-xl border border-theme p-5">
                     <div className="flex items-center gap-3">
-                        <div className="size-12 rounded-lg bg-red-500/10 flex items-center justify-center">
+                        <div className="size-12 rounded-lg bg-red-500/10 border border-red-500/20 flex items-center justify-center">
                             <span className="material-symbols-outlined text-red-500 filled">favorite</span>
                         </div>
                         <div>
@@ -165,14 +165,14 @@ export default function AdminOverview() {
                         </Link>
                         <Link
                             to="/admin/labels"
-                            className="inline-flex items-center gap-2 px-4 py-2 border border-theme rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                            className="inline-flex items-center gap-2 px-4 py-2 border border-theme rounded-lg bg-[var(--bg-surface-hover)] hover:bg-[var(--bg-elev-2)] text-primary transition-colors hover:border-[#2860E0]"
                         >
                             <span className="material-symbols-outlined text-xl">label</span>
                             Labels Beheren
                         </Link>
                         <Link
                             to="/admin/users"
-                            className="inline-flex items-center gap-2 px-4 py-2 border border-theme rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                            className="inline-flex items-center gap-2 px-4 py-2 border border-theme rounded-lg bg-[var(--bg-surface-hover)] hover:bg-[var(--bg-elev-2)] text-primary transition-colors hover:border-[#2860E0]"
                         >
                             <span className="material-symbols-outlined text-xl">group</span>
                             Gebruikers
@@ -194,8 +194,8 @@ export default function AdminOverview() {
                                 key={index}
                                 to={alert.link}
                                 className={`flex items-center gap-3 p-3 rounded-lg transition-colors ${alert.type === 'warning'
-                                    ? 'bg-amber-500/10 hover:bg-amber-500/20'
-                                    : 'bg-blue-500/10 hover:bg-blue-500/20'
+                                    ? 'bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/20'
+                                    : 'bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/20'
                                     }`}
                             >
                                 <span className={`material-symbols-outlined ${alert.type === 'warning' ? 'text-amber-500' : 'text-blue-500'
@@ -244,7 +244,7 @@ export default function AdminOverview() {
                         return (
                             <div
                                 key={appId}
-                                className="p-4 rounded-lg border border-theme bg-gray-50 dark:bg-gray-800/50"
+                                className="p-4 rounded-lg border border-theme bg-[var(--bg-app)]"
                             >
                                 <h4 className="font-medium">{config.appName}</h4>
                                 <p className="text-sm text-secondary mt-1">{config.description}</p>
